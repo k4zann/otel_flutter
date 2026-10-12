@@ -1,0 +1,57 @@
+#!/usr/bin/env bash
+# The format and analyzer checks CI runs, before each commit, so a commit
+# never fails CI for them. Enable once per clone:
+#
+#   git config core.hooksPath .githooks
+#
+# Skip in an emergency: git commit --no-verify
+#
+# Checks the working-tree version of the staged files. Kotlin/Swift
+# warnings and the tests take minutes, so they are left to CI.
+set -euo pipefail
+cd "$(git rev-parse --show-toplevel)"
+
+# Flutter: $FLUTTER, else the version pinned in .fvmrc from fvm's cache
+# (no fvm CLI needed), else flutter on PATH.
+pinned=$(sed -n 's/.*"flutter": *"\([^"]*\)".*/\1/p' .fvmrc 2>/dev/null || true)
+cached="${FVM_CACHE_PATH:-$HOME/fvm}/versions/$pinned/bin/flutter"
+if [[ -n "${FLUTTER:-}" ]]; then
+  flutter="$FLUTTER"
+elif [[ -n "$pinned" && -x "$cached" ]]; then
+  flutter="$cached"
+elif command -v flutter >/dev/null 2>&1; then
+  flutter=$(command -v flutter)
+else
+  echo "pre-commit: Flutter not found. Set FLUTTER=/path/to/flutter." >&2
+  exit 1
+fi
+dart="$(dirname "$flutter")/dart"
+
+staged_dart=$(git diff --cached --name-only --diff-filter=ACMR -- '*.dart')
+staged_config=$(git diff --cached --name-only --diff-filter=ACMRD -- \
+  '*pubspec.yaml' '*analysis_options.yaml')
+if [[ -z "$staged_dart$staged_config" ]]; then
+  exit 0
+fi
+
+# Git runs hooks with GIT_DIR, GIT_INDEX_FILE, ... set. Flutter finds its own
+# version by running git in its SDK folder, and with these set it reads this
+# repo instead: it reports 0.0.0-unknown, fails to resolve packages, and
+# writes that version into the SDK's cache.
+# shellcheck disable=SC2046
+unset $(git rev-parse --local-env-vars)
+
+if [[ -n "$staged_dart" ]]; then
+  echo "pre-commit: checking format"
+  if ! printf '%s\n' "$staged_dart" | tr '\n' '\0' |
+    xargs -0 "$dart" format --output=none --set-exit-if-changed; then
+    echo "pre-commit: files above are not formatted. Run: dart format ." >&2
+    exit 1
+  fi
+fi
+
+echo "pre-commit: analyzing"
+if ! "$flutter" analyze --fatal-infos --fatal-warnings; then
+  echo "pre-commit: fix the analyzer issues above (warnings and infos fail CI too)." >&2
+  exit 1
+fi

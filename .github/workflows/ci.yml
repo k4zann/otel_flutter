@@ -1,0 +1,138 @@
+name: CI
+
+# Every change must be formatted, warning-free and pass all tests: Dart
+# (core, plugin, examples, end-to-end against a real collector), the
+# plugin's Kotlin unit tests and its Swift unit tests.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  FLUTTER_VERSION: 3.44.2 # keep in sync with .fvmrc
+
+jobs:
+  dart:
+    name: Dart (format, analyze, test)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - name: Get dependencies
+        run: |
+          for dir in . example packages/otel_flutter_native packages/otel_flutter_native/example; do
+            (cd "$dir" && flutter pub get)
+          done
+
+      - name: Check formatting
+        run: dart format --output=none --set-exit-if-changed .
+
+      # Covers the core, the plugin and both example apps.
+      - name: Analyze (infos and warnings fail the build)
+        run: flutter analyze --fatal-infos --fatal-warnings
+
+      - name: Start an OpenTelemetry Collector for the end-to-end tests
+        run: |
+          docker run -d --name otelcol -p 4318:4318 \
+            -v "$PWD/backend/otel-collector.yaml:/etc/otelcol/config.yaml:ro" \
+            otel/opentelemetry-collector:0.162.0
+          # An empty export request is valid: 200 once the receiver is up.
+          for _ in $(seq 1 30); do
+            if curl -sf -o /dev/null -X POST -H 'Content-Type: application/x-protobuf' \
+              --data-binary '' http://127.0.0.1:4318/v1/traces; then exit 0; fi
+            sleep 1
+          done
+          docker logs otelcol
+          exit 1
+
+      - name: Test core (including end-to-end)
+        env:
+          OTEL_E2E_ENDPOINT: http://127.0.0.1:4318
+        run: flutter test
+
+      - name: Test plugin and examples
+        run: |
+          for dir in example packages/otel_flutter_native packages/otel_flutter_native/example; do
+            if [ -d "$dir/test" ]; then (cd "$dir" && flutter test); fi
+          done
+
+      - name: Collector log
+        if: failure()
+        run: docker logs otelcol || true
+
+  android:
+    name: Kotlin (plugin unit tests, no warnings)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      # gradlew and local.properties are not committed; this generates them.
+      - name: Generate the Gradle project
+        working-directory: packages/otel_flutter_native/example
+        run: flutter build apk --config-only
+
+      - name: Test (Kotlin warnings are errors)
+        working-directory: packages/otel_flutter_native/example/android
+        run: ./gradlew :otel_flutter_native:testDebugUnitTest -Potel.warningsAsErrors
+
+  ios:
+    name: Swift (plugin unit tests, no warnings)
+    runs-on: macos-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - name: Generate the Xcode project
+        working-directory: packages/otel_flutter_native/example
+        run: flutter build ios --simulator --debug --config-only
+
+      - name: Test (warnings in the plugin's Swift are errors)
+        working-directory: packages/otel_flutter_native/example/ios
+        run: |
+          set -o pipefail
+          udid=$(xcrun simctl list devices available --json | python3 -c '
+          import json, sys
+          devices = json.load(sys.stdin)["devices"]
+          print(next(d["udid"] for runtime, ds in devices.items() if "iOS" in runtime
+                     for d in ds if d["name"].startswith("iPhone")))')
+          xcodebuild test -workspace Runner.xcworkspace -scheme Runner \
+            -destination "id=$udid" -only-testing:RunnerTests | tee xcodebuild.log
+          # Only the plugin's own sources and tests: Flutter's generated code
+          # is not ours to fix.
+          if grep -E '(Sources/otel_flutter_native|RunnerTests)/[^:]*\.swift:[0-9]+:[0-9]+: warning:' xcodebuild.log; then
+            echo "::error::Swift warnings in otel_flutter_native"
+            exit 1
+          fi
