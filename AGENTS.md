@@ -24,11 +24,13 @@ screens, frames, UI stalls, app start, sessions and HTTP calls automatically.
 * Version 0.1.0, created 2026-10-12. Public git repo at
   https://github.com/k4zann/otel_flutter (branch `main`). Not published to
   pub.dev (`publish_to: none`); LICENSE still a placeholder.
-* Verified: 79 unit/widget tests; end-to-end against the official
-  OpenTelemetry Collector 0.162.0 (33 field checks plus an offline-restart
-  test); example app run on the iOS simulator (iPhone 16e, iOS 26.1);
-  `flutter build web` compiles. **Not yet verified on Android, on a real
-  device, or running in a browser.**
+* Verified: 87 unit/widget tests (+4 in `otel_flutter_native`); end-to-end
+  against the official OpenTelemetry Collector 0.162.0 (33 field checks
+  plus an offline-restart test); example app run on the iOS simulator
+  (iPhone 16e, iOS 26.1); `flutter build web` compiles. Native crash and
+  ANR reports verified end-to-end on the Android API 36.1 emulator
+  (profile build). **Not yet verified on a real device or in a browser;
+  the core SDK has had no full Android pass yet.**
 
 ## Commands
 
@@ -37,7 +39,8 @@ Flutter is **not on PATH**; use fvm's binary:
 ```bash
 FLUTTER=~/fvm/versions/3.44.2/bin/flutter   # Flutter 3.44.2 / Dart 3.12.2
 $FLUTTER analyze                            # must report "No issues found!"
-$FLUTTER test                               # 79 pass, 2 skipped (e2e)
+$FLUTTER test                               # 87 pass, 2 skipped (e2e)
+(cd packages/otel_flutter_native && $FLUTTER test)  # plugin: 4 pass
 OTEL_E2E_ENDPOINT=http://127.0.0.1:4318 $FLUTTER test test/e2e   # needs a collector
 cd example && $FLUTTER build ios --simulator --debug             # then launch Runner.app
 openspec list                     # open changes (the backlog)
@@ -68,7 +71,11 @@ lib/src/flutter/             errors, lifecycle, screens (NavigatorObserver), fra
 lib/src/http/                OtelHttpClient (package:http wrapper)
 test/                        unit + widget tests; test/support/proto_reader.dart decodes protobuf
 test/e2e/                    real-collector tests (skipped unless OTEL_E2E_ENDPOINT is set)
-example/                     demo app (buttons for every feature; uses path_provider)
+example/                     demo app (buttons for every feature, incl. native crash and ANR;
+                             uses path_provider and otel_flutter_native)
+packages/otel_flutter_native/  optional plugin: native crashes, ANRs, exit reasons on next launch
+                             (Kotlin ApplicationExitInfo + JVM handler, Swift MetricKit; Dart
+                             side registers via dartPluginClass + Otel.registerNativeCrashReporter)
 backend/                     docker-compose (Grafana LGTM, optional Jaeger) + plain collector config
 openspec/specs/              behavior specs: tracing, metrics, logs, otlp-export, offline-delivery,
                              error-reporting, app-lifecycle, screen-tracking, ui-performance,
@@ -153,6 +160,15 @@ pending data goes to disk first, then is sent.
   `OtelConfig.httpClient: MockClient(...)`.
 * The collector `file` exporter keeps its offset: truncating its output file
   leaves NUL bytes. Delete the file and restart instead.
+* ANR testing on the emulator: a frozen app only gets an ANR *exit* record
+  if "Close app" is pressed on the dialog (it closes itself when the
+  freeze ends, and ignores taps for its first second). `adb shell input
+  tap` into a frozen app blocks every later injected tap; trigger the ANR
+  with `input keyevent --async KEYCODE_SPACE` instead. The example freezes
+  for 20 s for this reason.
+* The `Medium_Phone_API_36.1` AVD's data partition is full; native-crash
+  runs used a separate `otel_test` AVD (8 GB) with a profile build (debug
+  APK is 142 MB; profile manifest allows cleartext to the local collector).
 * Android emulator → host is `10.0.2.2`; plain http needs
   `usesCleartextTraffic` (debug manifest) and, on iOS,
   `NSAllowsLocalNetworking`. Release Android needs the INTERNET permission
@@ -164,7 +180,7 @@ pending data goes to disk first, then is sent.
 |---|---|
 | `verify-android-and-real-devices` | Run on Android emulator + real iPhone/Android; record results; fix what breaks |
 | `run-local-grafana-backend` | Container runtime, run `backend/docker-compose.yml`, provision a Flutter health dashboard |
-| `add-native-crash-capture` | Native iOS/Android crashes (and ANRs) as `app.crash` events on next launch |
+| `add-native-crash-capture` | Native crashes/ANRs as `app.crash`/`app.anr` on next launch. Done except 4.1 (MetricKit on a real iPhone); Crashlytics coexistence verified |
 | `add-web-compression` | gzip on web via the browser's CompressionStream |
 | `choose-project-license` | Pick and apply a license (owner decision) |
 | `production-collector-deployment` | Hardened collector config + deploy guide; keep vendor keys out of the app |

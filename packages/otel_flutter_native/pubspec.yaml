@@ -17,6 +17,7 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^6.0.0
+  http: any
 
 flutter:
   plugin:
@@ -24,5 +25,7 @@ flutter:
       android:
         package: kz.mystartups.otel_flutter_native
         pluginClass: OtelFlutterNativePlugin
+        dartPluginClass: OtelFlutterNative
       ios:
         pluginClass: OtelFlutterNativePlugin
+        dartPluginClass: OtelFlutterNative

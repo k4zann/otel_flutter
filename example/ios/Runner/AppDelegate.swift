@@ -12,5 +12,12 @@ import UIKit
 
   func didInitializeImplicitFlutterEngine(_ engineBridge: FlutterImplicitEngineBridge) {
     GeneratedPluginRegistrant.register(with: engineBridge.pluginRegistry)
+    // Native crash for the "Native crash" button (reported on next launch).
+    let messenger = engineBridge.pluginRegistry.registrar(forPlugin: "ExampleNative")!.messenger()
+    FlutterMethodChannel(name: "example/native", binaryMessenger: messenger)
+      .setMethodCallHandler { call, result in
+        if call.method == "crash" { fatalError("Native crash from the example") }
+        result(FlutterMethodNotImplemented)
+      }
   }
 }

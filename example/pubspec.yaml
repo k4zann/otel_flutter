@@ -37,6 +37,8 @@ dependencies:
   path_provider: ^2.1.6
   otel_flutter:
     path: ..
+  otel_flutter_native:
+    path: ../packages/otel_flutter_native
   http: ^1.6.0
 
 dev_dependencies:

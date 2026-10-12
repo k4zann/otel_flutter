@@ -21,6 +21,8 @@ final class Logger {
 
   final InstrumentationScope scope;
 
+  /// A null value in [attributes] removes that session, screen or global
+  /// attribute from the record.
   void emit({
     Severity severity = Severity.info,
     Object? body,
@@ -37,7 +39,12 @@ final class Logger {
     final limits = pipeline.limits;
     final attrs = AttributeMap(limits.maxAttributes, limits.maxAttributeLength);
     pipeline.applyCommonAttributes(attrs);
-    attrs.setAll(attributes);
+    // An explicit null removes a common attribute: a record about an
+    // earlier run must not carry this run's session or screen.
+    attributes?.forEach(
+      (key, value) =>
+          value == null ? attrs.values.remove(key) : attrs.set(key, value),
+    );
     if (error != null) {
       attrs
         ..set('exception.type', error.runtimeType.toString())
