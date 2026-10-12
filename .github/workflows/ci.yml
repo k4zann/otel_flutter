@@ -2,7 +2,10 @@ name: CI
 
 # Every change must be formatted, warning-free and pass all tests: Dart
 # (core, plugin, examples, end-to-end against a real collector), the
-# plugin's Kotlin unit tests and its Swift unit tests.
+# plugin's Kotlin unit tests and its Swift unit tests. On pull requests the
+# slow native jobs run only when something they build changed (see
+# `changes`); pushes to main run everything. `CI passed` sums it all up and
+# is the check branch protection requires.
 
 on:
   push:
@@ -20,6 +23,35 @@ env:
   FLUTTER_VERSION: 3.44.2 # keep in sync with .fvmrc
 
 jobs:
+  changes:
+    name: Detect affected jobs
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      android: ${{ steps.filter.outputs.android }}
+      ios: ${{ steps.filter.outputs.ios }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 2 # the pull request's merge commit and its base
+
+      - id: filter
+        run: |
+          if [ "$GITHUB_EVENT_NAME" != pull_request ]; then
+            echo "android=true" | tee -a "$GITHUB_OUTPUT"
+            echo "ios=true" | tee -a "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          # HEAD merges the pull request into its base, HEAD^1 is that base.
+          changed=$(git diff --name-only HEAD^1 HEAD)
+          echo "$changed"
+          # Files that change what both native jobs build or how they run.
+          common='\.github/workflows/ci\.yml|\.fvmrc|packages/otel_flutter_native/(example/)?pubspec\.(yaml|lock)'
+          native='packages/otel_flutter_native/(example/)?'
+          affects() { grep -qE "^($common|$native$1/)" <<< "$changed" && echo true || echo false; }
+          echo "android=$(affects android)" | tee -a "$GITHUB_OUTPUT"
+          echo "ios=$(affects ios)" | tee -a "$GITHUB_OUTPUT"
+
   dart:
     name: Dart (format, analyze, test)
     runs-on: ubuntu-latest
@@ -77,6 +109,8 @@ jobs:
 
   android:
     name: Kotlin (plugin unit tests, no warnings)
+    needs: changes
+    if: needs.changes.outputs.android == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -104,23 +138,12 @@ jobs:
 
   ios:
     name: Swift (plugin unit tests, no warnings)
+    needs: changes
+    if: needs.changes.outputs.ios == 'true'
     runs-on: macos-latest
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v5
-
-      # A fresh runner's simulator needs minutes for its first boot; that
-      # used to be most of this job. Start it now so it boots while Flutter
-      # is installed and the app is built.
-      - name: Boot a simulator
-        run: |
-          udid=$(xcrun simctl list devices available --json | python3 -c '
-          import json, sys
-          devices = json.load(sys.stdin)["devices"]
-          print(next(d["udid"] for runtime, ds in devices.items() if "iOS" in runtime
-                     for d in ds if d["name"].startswith("iPhone")))')
-          echo "SIMULATOR_UDID=$udid" >> "$GITHUB_ENV"
-          xcrun simctl boot "$udid"
 
       - uses: subosito/flutter-action@v2
         with:
@@ -132,19 +155,55 @@ jobs:
         working-directory: packages/otel_flutter_native/example
         run: flutter build ios --simulator --debug --config-only
 
-      - name: Test (warnings in the plugin's Swift are errors)
+      - name: Pick a simulator
+        run: |
+          udid=$(xcrun simctl list devices available --json | python3 -c '
+          import json, sys
+          devices = json.load(sys.stdin)["devices"]
+          print(next(d["udid"] for runtime, ds in devices.items() if "iOS" in runtime
+                     for d in ds if d["name"].startswith("iPhone")))')
+          echo "SIMULATOR_UDID=$udid" >> "$GITHUB_ENV"
+
+      - name: Build (warnings in the plugin's Swift are errors)
         working-directory: packages/otel_flutter_native/example/ios
         run: |
           set -o pipefail
-          xcrun simctl bootstatus "$SIMULATOR_UDID" -b
-          # The scheme allows parallel testing, which makes xcodebuild clone
-          # the simulator and cold-boot the clone (~6 min). Use the booted one.
-          xcodebuild test -workspace Runner.xcworkspace -scheme Runner \
-            -destination "id=$SIMULATOR_UDID" -parallel-testing-enabled NO \
-            -only-testing:RunnerTests | tee xcodebuild.log
+          xcodebuild build-for-testing -workspace Runner.xcworkspace -scheme Runner \
+            -destination "id=$SIMULATOR_UDID" | tee xcodebuild.log
           # Only the plugin's own sources and tests: Flutter's generated code
           # is not ours to fix.
           if grep -E '(Sources/otel_flutter_native|RunnerTests)/[^:]*\.swift:[0-9]+:[0-9]+: warning:' xcodebuild.log; then
             echo "::error::Swift warnings in otel_flutter_native"
             exit 1
           fi
+
+      # Only after the build: a simulator booting alongside the Flutter setup
+      # and the build slowed both by minutes (the runner has 3 CPUs).
+      - name: Boot the simulator
+        run: xcrun simctl bootstatus "$SIMULATOR_UDID" -b
+
+      # The scheme allows parallel testing, which makes xcodebuild clone the
+      # simulator and cold-boot the clone (3 to 6 min). Test on the booted one.
+      - name: Test
+        working-directory: packages/otel_flutter_native/example/ios
+        run: |
+          xcodebuild test-without-building -workspace Runner.xcworkspace -scheme Runner \
+            -destination "id=$SIMULATOR_UDID" -parallel-testing-enabled NO \
+            -only-testing:RunnerTests
+
+  # The single check branch protection requires, so skipped native jobs
+  # count as passed while failed or cancelled ones block the merge.
+  ci-passed:
+    name: CI passed
+    if: always()
+    needs: [changes, dart, android, ios]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: |
+          echo "Job results: $RESULTS"
+          case " $RESULTS " in
+            *" failure "* | *" cancelled "*) exit 1 ;;
+          esac

@@ -150,8 +150,13 @@ pending data goes to disk first, then is sent.
   format, analyze with infos/warnings fatal, all Dart tests including e2e
   against a collector container, the plugin's Kotlin tests
   (`-Potel.warningsAsErrors`) and Swift tests (warnings in its sources
-  fail). `.githooks/pre-commit` runs the format and analyze checks
-  locally; enable once per clone with `git config core.hooksPath .githooks`.
+  fail). On PRs the Kotlin/Swift jobs run only when the plugin's
+  `android/`/`ios/` code (or its example's), the plugin pubspecs or
+  lockfiles, `.fvmrc` or `ci.yml` change; Dart- or docs-only PRs skip them.
+  The `CI passed` job fails if any job failed or was cancelled and is the
+  one check to require for merging. `.githooks/pre-commit` runs the format
+  and analyze checks locally; enable once per clone with
+  `git config core.hooksPath .githooks`.
 
 ## Gotchas learned the hard way
 
@@ -181,9 +186,11 @@ pending data goes to disk first, then is sent.
   (all three are already set in `example/`).
 * CI's Swift job: the Runner scheme marks `RunnerTests` parallelizable, so
   plain `xcodebuild test` clones the simulator and cold-boots the clone
-  (~6.5 of the job's ~9 min; the tests take 0.01 s). CI passes
-  `-parallel-testing-enabled NO` and boots the simulator in its first step
-  so the boot overlaps the Flutter setup and build. Keep both.
+  (3 to 6.5 min; the tests take 0.01 s). CI passes
+  `-parallel-testing-enabled NO` (testing then takes ~100 s). Boot the
+  simulator only after `build-for-testing`: booting it at the start of the
+  job, alongside the Flutter setup, made that setup take 172 to 288 s
+  instead of 33 to 96 s and tripled the build (runners have 3 CPUs).
 
 ## Backlog (OpenSpec changes, `openspec list`)
 
