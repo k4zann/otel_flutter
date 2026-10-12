@@ -50,12 +50,18 @@ abstract final class OtelFlutterNative {
     await Otel.flush();
   }
 
-  static void _emit(Map<Object?, Object?> record, PreviousRunContext? previous) {
+  static void _emit(
+    Map<Object?, Object?> record,
+    PreviousRunContext? previous,
+  ) {
     final raw = record['reason'];
     final reason = exitReasons.contains(raw) ? raw as String : 'other';
     Otel.meter('otel_flutter_native')
-        .counter('app.exits',
-            unit: '{exit}', description: 'How previous processes ended.')
+        .counter(
+          'app.exits',
+          unit: '{exit}',
+          description: 'How previous processes ended.',
+        )
         .add(1, {'app.exit.reason': reason});
 
     final event = switch (reason) {
@@ -66,13 +72,13 @@ abstract final class OtelFlutterNative {
     if (event == null) return;
 
     final millis = record['time'];
-    final time =
-        millis is int ? DateTime.fromMillisecondsSinceEpoch(millis) : null;
+    final time = millis is int
+        ? DateTime.fromMillisecondsSinceEpoch(millis)
+        : null;
     // The saved context covers the previous run from its time on; an older
     // record belongs to a run nothing was saved for.
-    final context = previous != null &&
-            time != null &&
-            !time.isBefore(previous.time)
+    final context =
+        previous != null && time != null && !time.isBefore(previous.time)
         ? previous
         : null;
     final type = _string(record['type']);
