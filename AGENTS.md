@@ -21,8 +21,9 @@ screens, frames, UI stalls, app start, sessions and HTTP calls automatically.
 
 * Written from scratch from the OpenTelemetry spec and opentelemetry-proto.
   It contains no Dartastic code.
-* Version 0.1.0, created 2026-10-12. Not published (`publish_to: none`),
-  not a git repo yet, LICENSE still a placeholder.
+* Version 0.1.0, created 2026-10-12. Public git repo at
+  https://github.com/k4zann/otel_flutter (branch `main`). Not published to
+  pub.dev (`publish_to: none`); LICENSE still a placeholder.
 * Verified: 79 unit/widget tests; end-to-end against the official
   OpenTelemetry Collector 0.162.0 (33 field checks plus an offline-restart
   test); example app run on the iOS simulator (iPhone 16e, iOS 26.1);
