@@ -179,6 +179,11 @@ pending data goes to disk first, then is sent.
   `usesCleartextTraffic` (debug manifest) and, on iOS,
   `NSAllowsLocalNetworking`. Release Android needs the INTERNET permission
   (all three are already set in `example/`).
+* CI's Swift job: the Runner scheme marks `RunnerTests` parallelizable, so
+  plain `xcodebuild test` clones the simulator and cold-boots the clone
+  (~6.5 of the job's ~9 min; the tests take 0.01 s). CI passes
+  `-parallel-testing-enabled NO` and boots the simulator in its first step
+  so the boot overlaps the Flutter setup and build. Keep both.
 
 ## Backlog (OpenSpec changes, `openspec list`)
 
