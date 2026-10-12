@@ -22,17 +22,17 @@
 
 ## 5. Reporting (Dart side of the plugin)
 
-- [ ] 5.1 At init, call `getPendingCrashes()`, join each record with the previous context file by time, and emit `app.crash` / `app.anr` (FATAL, `exception.*`, crash time, previous `session.id` and `app.screen.name`); verify widget tests with a mocked MethodChannel cover crash, ANR and missing context
-- [ ] 5.2 Increment `app.exits` with `app.exit.reason`; verify the metric test checks the bounded value set
-- [ ] 5.3 Make every channel failure a silent no-op (never throw into the app); verify a test with a throwing channel
+- [x] 5.1 At init, call `getPendingCrashes()`, join each record with the previous context file by time, and emit `app.crash` / `app.anr` (FATAL, `exception.*`, crash time, previous `session.id` and `app.screen.name`); verify widget tests with a mocked MethodChannel cover crash, ANR and missing context
+- [x] 5.2 Increment `app.exits` with `app.exit.reason`; verify the metric test checks the bounded value set
+- [x] 5.3 Make every channel failure a silent no-op (never throw into the app); verify a test with a throwing channel
 
 ## 6. End-to-end verification
 
-- [ ] 6.1 Add a "Native crash" button to the example (Kotlin `throw RuntimeException`, Swift `fatalError` via a small method channel); crash, relaunch, and verify one `app.crash` reaches the collector with the right `session.id` and screen
-- [ ] 6.2 Trigger an ANR on the Android emulator (block the main thread ~10 s via the channel), relaunch, and verify `app.anr` arrives once
-- [ ] 6.3 Install Firebase Crashlytics in a scratch copy of the example; verify both Crashlytics and `app.crash` record the same Kotlin crash
+- [x] 6.1 Add a "Native crash" button to the example (Kotlin `throw RuntimeException`, Swift `fatalError` via a small method channel); crash, relaunch, and verify one `app.crash` reaches the collector with the right `session.id` and screen (verified on Android API 36.1 emulator with collector 0.162.0, plus no duplicate on a second relaunch; iOS: Swift side builds, but MetricKit does not deliver on the simulator, so the iOS run needs a device, like 4.1)
+- [x] 6.2 Trigger an ANR on the Android emulator (block the main thread ~10 s via the channel), relaunch, and verify `app.anr` arrives once (the example blocks 20 s: a 10 s freeze ends before the ANR dialog's "Close app" can be pressed, and without it the process survives and no ANR exit is recorded)
+- [x] 6.3 Install Firebase Crashlytics in a scratch copy of the example; verify both Crashlytics and `app.crash` record the same Kotlin crash (Firebase project `otel-flutter-crash-test`, Crashlytics 20.1.1, API 36.1 emulator: Crashlytics handled and uploaded the crash (HTTP 200), and `app.crash` arrived with the class, message, stack and session from our chained handler)
 
 ## 7. Docs and checks
 
-- [ ] 7.1 Promote the delta spec to `openspec/specs/native-crash-reporting/spec.md` at archive; update README (installation, limits, symbolication note) and AGENTS.md (layout, backlog); verify `openspec validate --all --strict` passes
-- [ ] 7.2 Verify `flutter analyze` is clean and `flutter test` is green in both packages, and run `test/e2e` against a collector
+- [x] 7.1 Promote the delta spec to `openspec/specs/native-crash-reporting/spec.md` at archive; update README (installation, limits, symbolication note) and AGENTS.md (layout, backlog); verify `openspec validate --all --strict` passes
+- [x] 7.2 Verify `flutter analyze` is clean and `flutter test` is green in both packages, and run `test/e2e` against a collector

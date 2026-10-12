@@ -234,6 +234,13 @@ packages:
       relative: true
     source: path
     version: "0.1.0"
+  otel_flutter_native:
+    dependency: "direct main"
+    description:
+      path: "../packages/otel_flutter_native"
+      relative: true
+    source: path
+    version: "0.1.0"
   package_config:
     dependency: transitive
     description:

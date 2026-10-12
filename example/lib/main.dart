@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:otel_flutter/otel_flutter.dart';
 import 'package:path_provider/path_provider.dart';
 
@@ -37,6 +38,10 @@ final tracer = Otel.tracer('example');
 final logger = Otel.logger('example');
 final clicks = Otel.meter('example').counter('example.button.clicks');
 final api = OtelHttpClient();
+
+/// Crashes and freezes the app natively (see MainActivity / AppDelegate),
+/// reported by otel_flutter_native on the next launch.
+const native = MethodChannel('example/native');
 
 class ExampleApp extends StatelessWidget {
   const ExampleApp({super.key});
@@ -116,6 +121,17 @@ class _HomeScreenState extends State<HomeScreen> {
     _show('Blocked the UI thread for 800 ms.');
   }
 
+  void _nativeCrash() {
+    clicks.add(1, {'button': 'native_crash'});
+    unawaited(native.invokeMethod<void>('crash'));
+  }
+
+  void _anr() {
+    clicks.add(1, {'button': 'anr'});
+    _show('Main thread blocked for 20 s: tap the screen, then choose "Close app".');
+    unawaited(native.invokeMethod<void>('block'));
+  }
+
   Future<void> _flush() async {
     await Otel.flush();
     _show('Flushed everything buffered.');
@@ -131,6 +147,8 @@ class _HomeScreenState extends State<HomeScreen> {
       ('Caught error', Icons.report, _caughtError),
       ('Uncaught error', Icons.bug_report, _uncaughtError),
       ('Jank (800 ms)', Icons.slow_motion_video, _jank),
+      ('Native crash', Icons.dangerous, _nativeCrash),
+      ('Freeze main thread (ANR)', Icons.hourglass_full, _anr),
       ('Flush now', Icons.send, _flush),
     ];
     return Scaffold(

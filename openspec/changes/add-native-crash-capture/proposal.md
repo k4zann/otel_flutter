@@ -27,7 +27,9 @@ the most important stability signal for a mobile app (crash-free sessions).
   exits from the previous run on the next launch.
 
 ### Modified Capabilities
-None. Dart error reporting is unchanged.
+- `logs`: an explicit null record attribute removes a common attribute, so
+  a crash from an earlier run never carries the current `session.id`.
+  Dart error reporting is unchanged.
 
 ## Impact
 

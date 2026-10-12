@@ -68,6 +68,39 @@ That's it. Everything below is captured without more code.
 Existing error handlers (Crashlytics, Sentry, the red error screen) keep
 working: `otel_flutter` chains onto them instead of replacing them.
 
+### Native crashes, ANRs and exit reasons (optional plugin)
+
+Crashes in Kotlin/Swift/C++ code, signals such as SIGSEGV, Android ANRs and
+low-memory kills end the process before Dart can react. The companion
+plugin [`otel_flutter_native`](packages/otel_flutter_native) reads what the
+OS recorded about them and reports it **on the next launch**. Add it and
+rebuild the app; no code needed:
+
+```yaml
+dependencies:
+  otel_flutter_native:
+    path: ../otel_flutter/packages/otel_flutter_native   # or a git URL
+```
+
+| Signal | What | Name |
+|---|---|---|
+| Log | JVM crash, native crash (signal), uncaught Objective-C/Swift exception: FATAL, `exception.*`, crash time | event `app.crash` |
+| Log | Android ANR, with the main thread's stack | event `app.anr` |
+| Metric | How the previous process ended: `crash`, `native_crash`, `anr`, `low_memory`, `user_request`, `os_update`, `other` | `app.exits` by `app.exit.reason` |
+
+* Each report carries the `session.id` and `app.screen.name` of the run
+  that crashed (needs `offlineStorageDirectory`). Each OS record is reported
+  once.
+* Android: full history on API 30+ (`ApplicationExitInfo`); below 30 only
+  JVM crashes. iOS 14+ (MetricKit): delivered shortly after the next launch
+  on iOS 15+, in a daily batch on iOS 14. MetricKit does not run in the
+  simulator.
+* Coexists with Crashlytics/Sentry: it only reads OS records and chains the
+  JVM handler; no signal handlers. Does nothing on web and desktop.
+* Stacks are not symbolicated. Frames carry build ids / image UUIDs, so they
+  can be resolved later with your R8 mapping or dSYMs.
+* Turn it off without uninstalling: `captureNativeCrashes: false`.
+
 ## 3. What it needs to connect
 
 Only an **OTLP/HTTP endpoint**: an OpenTelemetry Collector or any backend
@@ -208,6 +241,7 @@ readable names.
 | `compression` | true | gzip (native) |
 | `sessionTimeout` | 30 min | background time before a new session |
 | `captureErrors` / `captureFrames` / `captureStalls` / `captureAppStart` / `captureLifecycle` | true | automatic instrumentation |
+| `captureNativeCrashes` | true | native crash reports when `otel_flutter_native` is installed |
 | `debug` | false | print one line per export and every problem |
 | `httpClient` | null | custom client, e.g. for self-signed certs / mTLS |
 
@@ -229,7 +263,8 @@ Behavior specs and the backlog (planned changes with tasks) live in
 [openspec/](openspec/): run `openspec list`.
 
 ```bash
-flutter test                                             # 79 unit + widget tests
+flutter test                                             # 87 unit + widget tests
 OTEL_E2E_ENDPOINT=http://localhost:4318 flutter test test/e2e   # against a real collector
 cd example && flutter run                                # demo app
+cd packages/otel_flutter_native && flutter test          # native crash plugin
 ```

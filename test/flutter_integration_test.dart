@@ -301,6 +301,8 @@ void main() {
     Otel.setGlobalAttribute('tenant', 'acme');
     Otel.tracer('t').startSpan('s').end();
     Otel.logger('t').info('l');
+    Otel.logger('t')
+        .info('earlier run', attributes: {'session.id': null, 'tenant': null});
     Otel.setUser(null);
     Otel.tracer('t').startSpan('after-logout').end();
     await Otel.flush();
@@ -309,8 +311,13 @@ void main() {
     expect(spanNamed('s').attributes(9), containsPair('tenant', 'acme'));
     expect(spanNamed('after-logout').attributes(9).containsKey('user.id'),
         isFalse);
-    final l = logs().lastWhere((l) => l.has(5));
-    expect(l.attributes(6), containsPair('user.id', 'u-42'));
+    Msg log(String body) =>
+        logs().singleWhere((l) => l.has(5) && Msg.anyValue(l.message(5)) == body);
+    expect(log('l').attributes(6), containsPair('user.id', 'u-42'));
+    expect(log('earlier run').attributes(6).keys,
+        allOf(contains('user.id'), isNot(contains('session.id')),
+            isNot(contains('tenant'))),
+        reason: 'an explicit null removes a common attribute');
   });
 
   testWidgets('everything is a safe no-op before init', (tester) async {
