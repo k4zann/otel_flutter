@@ -154,9 +154,14 @@ pending data goes to disk first, then is sent.
   `android/`/`ios/` code (or its example's), the plugin pubspecs or
   lockfiles, `.fvmrc` or `ci.yml` change; Dart- or docs-only PRs skip them.
   The `CI passed` job fails if any job failed or was cancelled and is the
-  one check to require for merging. `.githooks/pre-commit` runs the format
-  and analyze checks locally; enable once per clone with
+  check `main` requires. `.githooks/pre-commit` runs the format and analyze
+  checks locally; enable once per clone with
   `git config core.hooksPath .githooks`.
+* `main` is protected (ruleset "Protect main", no bypass): changes land
+  only through a PR whose `CI passed` check is green; direct pushes, force
+  pushes and deleting `main` are rejected. Work on a branch from an
+  up-to-date `main` and open a PR. Renaming the `CI passed` job also needs
+  the ruleset updated, or every PR waits forever for the old check.
 
 ## Gotchas learned the hard way
 
