@@ -231,7 +231,6 @@ pending data goes to disk first, then is sent.
 | Change | Goal |
 |---|---|
 | `verify-android-and-real-devices` | Run on Android emulator + real iPhone/Android; record results; fix what breaks |
-| `run-local-grafana-backend` | Done: Colima + LGTM stack, Flutter App Health dashboard provisioned; remove this row at archive |
 | `add-native-crash-capture` | Native crashes/ANRs as `app.crash`/`app.anr` on next launch. Done except 4.1 (MetricKit on a real iPhone); Crashlytics coexistence verified |
 | `add-web-compression` | gzip on web via the browser's CompressionStream |
 | `production-collector-deployment` | Hardened collector config + deploy guide; keep vendor keys out of the app |
