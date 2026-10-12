@@ -61,9 +61,9 @@ final class Msg {
   String string(int field) => utf8.decode(bytes(field));
   Msg message(int field) => Msg.parse(bytes(field));
   List<Msg> messages(int field) => [
-        for (final (_, v) in fields[field] ?? const <(int, Object)>[])
-          Msg.parse(v as Uint8List),
-      ];
+    for (final (_, v) in fields[field] ?? const <(int, Object)>[])
+      Msg.parse(v as Uint8List),
+  ];
 
   int fixed32(int field) =>
       ByteData.sublistView(bytes(field)).getUint32(0, Endian.little);
@@ -77,7 +77,8 @@ final class Msg {
   List<int> packedFixed64(int field) {
     final b = ByteData.sublistView(bytes(field));
     return [
-      for (var o = 0; o < b.lengthInBytes; o += 8) b.getUint64(o, Endian.little),
+      for (var o = 0; o < b.lengthInBytes; o += 8)
+        b.getUint64(o, Endian.little),
     ];
   }
 
@@ -91,9 +92,9 @@ final class Msg {
 
   /// Decodes `repeated KeyValue` into a map.
   Map<String, Object?> attributes(int field) => {
-        for (final kv in messages(field))
-          kv.string(1): kv.has(2) ? anyValue(kv.message(2)) : null,
-      };
+    for (final kv in messages(field))
+      kv.string(1): kv.has(2) ? anyValue(kv.message(2)) : null,
+  };
 
   /// Decodes an AnyValue message.
   static Object? anyValue(Msg v) {

@@ -48,41 +48,44 @@ class _HarnessAppState extends State<HarnessApp> {
 
   @override
   Widget build(BuildContext context) => MaterialApp(
-        home: Scaffold(
-          appBar: AppBar(title: const Text('otel_flutter_native harness')),
-          floatingActionButton: FloatingActionButton.extended(
-            onPressed: _check,
-            label: const Text('Check again'),
-          ),
-          body: ListView(
-            padding: const EdgeInsets.all(16),
+    home: Scaffold(
+      appBar: AppBar(title: const Text('otel_flutter_native harness')),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: _check,
+        label: const Text('Check again'),
+      ),
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          Wrap(
+            spacing: 8,
             children: [
-              Wrap(spacing: 8, children: [
-                OutlinedButton(
-                  onPressed: () => _harness.invokeMethod<void>('crash'),
-                  child: const Text('Native crash'),
-                ),
-                OutlinedButton(
-                  onPressed: () => _harness.invokeMethod<void>('signal'),
-                  child: const Text('SIGSEGV'),
-                ),
-                OutlinedButton(
-                  onPressed: () => _harness.invokeMethod<void>('hang'),
-                  child: const Text('Hang main thread'),
-                ),
-              ]),
-              for (final r in _results)
-                Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(12),
-                    child: SelectableText(
-                      r,
-                      style: const TextStyle(fontFamily: 'monospace'),
-                    ),
-                  ),
-                ),
+              OutlinedButton(
+                onPressed: () => _harness.invokeMethod<void>('crash'),
+                child: const Text('Native crash'),
+              ),
+              OutlinedButton(
+                onPressed: () => _harness.invokeMethod<void>('signal'),
+                child: const Text('SIGSEGV'),
+              ),
+              OutlinedButton(
+                onPressed: () => _harness.invokeMethod<void>('hang'),
+                child: const Text('Hang main thread'),
+              ),
             ],
           ),
-        ),
-      );
+          for (final r in _results)
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: SelectableText(
+                  r,
+                  style: const TextStyle(fontFamily: 'monospace'),
+                ),
+              ),
+            ),
+        ],
+      ),
+    ),
+  );
 }

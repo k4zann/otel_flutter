@@ -13,8 +13,7 @@ OfflineStore? createOfflineStore(
   String directory, {
   required int maxBytes,
   required Duration maxAge,
-}) =>
-    null;
+}) => null;
 
 Future<String?> loadOrCreateInstallationId(String? directory) async => null;
 

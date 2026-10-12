@@ -68,6 +68,9 @@ android {
 kotlin {
     compilerOptions {
         jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17
+        // CI passes -Potel.warningsAsErrors. Off by default so a new compiler
+        // warning can never break an app that depends on this plugin.
+        allWarningsAsErrors = providers.gradleProperty("otel.warningsAsErrors").isPresent
     }
 }
 

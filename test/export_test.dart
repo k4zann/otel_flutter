@@ -44,7 +44,7 @@ void main() {
         expect(batches, isEmpty);
         fa.elapse(const Duration(seconds: 1));
         expect(batches, [
-          [1]
+          [1],
         ]);
       });
     });
@@ -135,16 +135,15 @@ void main() {
       MemoryStore? store,
       bool compression = false,
       int maxAttempts = 3,
-    }) =>
-        OtlpHttpExporter(
-          endpoints: endpoints,
-          headers: {'Authorization': 'Bearer t'},
-          client: client,
-          timeout: const Duration(seconds: 10),
-          compression: compression,
-          maxAttempts: maxAttempts,
-          store: store,
-        );
+    }) => OtlpHttpExporter(
+      endpoints: endpoints,
+      headers: {'Authorization': 'Bearer t'},
+      client: client,
+      timeout: const Duration(seconds: 10),
+      compression: compression,
+      maxAttempts: maxAttempts,
+      store: store,
+    );
 
     tearDown(() => Clock.debugNowMicros = null);
 
@@ -167,10 +166,12 @@ void main() {
 
     test('retries network errors, then succeeds', () async {
       var calls = 0;
-      final exporter = make(MockClient((_) async {
-        if (++calls < 3) throw const SocketException('offline');
-        return http.Response('', 200);
-      }));
+      final exporter = make(
+        MockClient((_) async {
+          if (++calls < 3) throw const SocketException('offline');
+          return http.Response('', 200);
+        }),
+      );
       await exporter.export(Signal.traces, body);
       expect(calls, 3);
       expect(exporter.droppedRequests, 0);
@@ -178,22 +179,26 @@ void main() {
 
     test('honours Retry-After on 429 / 503', () async {
       var calls = 0;
-      final exporter = make(MockClient((_) async {
-        calls++;
-        return calls == 1
-            ? http.Response('', 429, headers: {'retry-after': '0'})
-            : http.Response('', 200);
-      }));
+      final exporter = make(
+        MockClient((_) async {
+          calls++;
+          return calls == 1
+              ? http.Response('', 429, headers: {'retry-after': '0'})
+              : http.Response('', 200);
+        }),
+      );
       await exporter.export(Signal.traces, body);
       expect(calls, 2);
     });
 
     test('permanent errors are not retried', () async {
       var calls = 0;
-      final exporter = make(MockClient((_) async {
-        calls++;
-        return http.Response('bad', 400);
-      }));
+      final exporter = make(
+        MockClient((_) async {
+          calls++;
+          return http.Response('bad', 400);
+        }),
+      );
       await exporter.export(Signal.traces, body);
       expect(calls, 1);
       expect(exporter.droppedRequests, 1);
@@ -242,7 +247,9 @@ void main() {
       final sent = <Signal>[];
       final exporter = make(
         MockClient((r) async {
-          sent.add(Signal.values.firstWhere((s) => r.url.path.endsWith(s.name)));
+          sent.add(
+            Signal.values.firstWhere((s) => r.url.path.endsWith(s.name)),
+          );
           return http.Response('', 200);
         }),
         store: store,
@@ -282,10 +289,17 @@ void main() {
     tearDown(() => dir.deleteSync(recursive: true));
 
     test('save / oldest / delete preserves order and flags', () async {
-      final store = createOfflineStore(dir.path,
-          maxBytes: 1 << 20, maxAge: const Duration(days: 1))!;
-      await store.save(Payload(Signal.traces, Uint8List.fromList([1]), gzipped: true));
-      await store.save(Payload(Signal.logs, Uint8List.fromList([2]), gzipped: false));
+      final store = createOfflineStore(
+        dir.path,
+        maxBytes: 1 << 20,
+        maxAge: const Duration(days: 1),
+      )!;
+      await store.save(
+        Payload(Signal.traces, Uint8List.fromList([1]), gzipped: true),
+      );
+      await store.save(
+        Payload(Signal.logs, Uint8List.fromList([2]), gzipped: false),
+      );
       final first = (await store.oldest())!;
       expect(first.payload.signal, Signal.traces);
       expect(first.payload.gzipped, isTrue);
@@ -298,12 +312,19 @@ void main() {
     });
 
     test('size cap evicts the oldest files', () async {
-      final store = createOfflineStore(dir.path,
-          maxBytes: 250, maxAge: const Duration(days: 1))!;
+      final store = createOfflineStore(
+        dir.path,
+        maxBytes: 250,
+        maxAge: const Duration(days: 1),
+      )!;
       for (var i = 0; i < 5; i++) {
-        await store.save(Payload(
-            Signal.traces, Uint8List.fromList(List.filled(100, i)),
-            gzipped: false));
+        await store.save(
+          Payload(
+            Signal.traces,
+            Uint8List.fromList(List.filled(100, i)),
+            gzipped: false,
+          ),
+        );
       }
       final kept = <int>[];
       for (var s = await store.oldest(); s != null; s = await store.oldest()) {
@@ -314,8 +335,11 @@ void main() {
     });
 
     test('expired files are discarded', () async {
-      final store = createOfflineStore(dir.path,
-          maxBytes: 1 << 20, maxAge: Duration.zero)!;
+      final store = createOfflineStore(
+        dir.path,
+        maxBytes: 1 << 20,
+        maxAge: Duration.zero,
+      )!;
       await store.save(Payload(Signal.traces, Uint8List(1), gzipped: false));
       await Future<void>.delayed(const Duration(milliseconds: 5));
       expect(await store.oldest(), isNull);

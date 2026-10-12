@@ -39,8 +39,9 @@ void main() {
   });
 
   group('reporter hook', () {
-    testWidgets('a registered reporter runs after init unless disabled',
-        (tester) async {
+    testWidgets('a registered reporter runs after init unless disabled', (
+      tester,
+    ) async {
       var calls = 0;
       Otel.registerNativeCrashReporter((_) async => calls++);
 
@@ -55,10 +56,8 @@ void main() {
       await Otel.shutdown();
     });
 
-    testWidgets('a failing reporter never throws into the app',
-        (tester) async {
-      Otel.registerNativeCrashReporter(
-          (_) => throw StateError('channel gone'));
+    testWidgets('a failing reporter never throws into the app', (tester) async {
+      Otel.registerNativeCrashReporter((_) => throw StateError('channel gone'));
       await Otel.init(config());
       await tester.pump();
       expect(Otel.isInitialized, isTrue);
@@ -79,12 +78,12 @@ void main() {
     tearDown(() => dir.deleteSync(recursive: true));
 
     void navigateTo(String name) => OtelNavigatorObserver().didPush(
-          MaterialPageRoute<void>(
-            settings: RouteSettings(name: name),
-            builder: (_) => const SizedBox(),
-          ),
-          null,
-        );
+      MaterialPageRoute<void>(
+        settings: RouteSettings(name: name),
+        builder: (_) => const SizedBox(),
+      ),
+      null,
+    );
 
     Map<String, Object?> read(File f) =>
         jsonDecode(f.readAsStringSync()) as Map<String, Object?>;
@@ -93,8 +92,9 @@ void main() {
       fakeAsync((async) {
         Clock.debugNowMicros = () => async.elapsed.inMicroseconds;
         final written = <Object?>[];
-        final writer =
-            CrashContextWriter((json) async => written.add(jsonDecode(json)));
+        final writer = CrashContextWriter(
+          (json) async => written.add(jsonDecode(json)),
+        );
 
         writer.save('s1', '/');
         async.flushMicrotasks();
@@ -110,8 +110,11 @@ void main() {
         expect(written, hasLength(1), reason: 'throttled');
         async.elapse(const Duration(milliseconds: 800));
         expect(written, hasLength(2), reason: 'one write for the burst');
-        expect(written.last,
-            {'session.id': 's1', 'app.screen.name': '/b', 'time': 200});
+        expect(written.last, {
+          'session.id': 's1',
+          'app.screen.name': '/b',
+          'time': 200,
+        });
 
         async.elapse(const Duration(seconds: 5));
         writer.save('s2', null);
@@ -126,19 +129,24 @@ void main() {
       });
     });
 
-    test('navigation saves session and screen to the storage directory',
-        () async {
-      Otel.registerNativeCrashReporter((_) async {});
-      await Otel.init(config(dir: dir.path));
-      final session = Otel.sessionId;
-      navigateTo('/details');
-      await Otel.shutdown(); // writes the throttled change
+    test(
+      'navigation saves session and screen to the storage directory',
+      () async {
+        Otel.registerNativeCrashReporter((_) async {});
+        await Otel.init(config(dir: dir.path));
+        final session = Otel.sessionId;
+        navigateTo('/details');
+        await Otel.shutdown(); // writes the throttled change
 
-      final saved = read(current);
-      expect(saved['session.id'], session);
-      expect(saved['app.screen.name'], '/details');
-      expect(saved['time'], closeTo(DateTime.now().millisecondsSinceEpoch, 5000));
-    });
+        final saved = read(current);
+        expect(saved['session.id'], session);
+        expect(saved['app.screen.name'], '/details');
+        expect(
+          saved['time'],
+          closeTo(DateTime.now().millisecondsSinceEpoch, 5000),
+        );
+      },
+    );
 
     test('nothing is saved without a reporter or when disabled', () async {
       await Otel.init(config(dir: dir.path));
@@ -153,8 +161,7 @@ void main() {
       expect(current.existsSync(), isFalse, reason: 'disabled in config');
     });
 
-    test('init rotates the previous run to .prev and hands it over',
-        () async {
+    test('init rotates the previous run to .prev and hands it over', () async {
       final received = <PreviousRunContext?>[];
       Otel.registerNativeCrashReporter((p) async => received.add(p));
 
@@ -177,7 +184,8 @@ void main() {
 
     test('a stale .prev from an older run is dropped', () async {
       previous.writeAsStringSync(
-          '{"session.id":"old","time":${DateTime.now().millisecondsSinceEpoch}}');
+        '{"session.id":"old","time":${DateTime.now().millisecondsSinceEpoch}}',
+      );
       final received = <PreviousRunContext?>[];
       Otel.registerNativeCrashReporter((p) async => received.add(p));
 

@@ -52,8 +52,7 @@ OfflineStore? createOfflineStore(
   String directory, {
   required int maxBytes,
   required Duration maxAge,
-}) =>
-    _FileStore(directory, maxBytes, maxAge);
+}) => _FileStore(directory, maxBytes, maxAge);
 
 Future<String?> loadOrCreateInstallationId(String? directory) async {
   if (directory == null) return null;
@@ -103,7 +102,10 @@ Future<void> writeCrashContext(String directory, String json) async {
     await tmp.writeAsString(json);
     await tmp.rename('$directory/$_crashContextFile');
   } catch (e) {
-    Diagnostics.warnOnce('crash-context-write', 'Cannot save crash context: $e');
+    Diagnostics.warnOnce(
+      'crash-context-write',
+      'Cannot save crash context: $e',
+    );
   }
 }
 
@@ -112,7 +114,7 @@ Future<void> writeCrashContext(String directory, String json) async {
 /// leaves a truncated payload behind.
 final class _FileStore implements OfflineStore {
   _FileStore(String base, this._maxBytes, this._maxAge)
-      : _dir = Directory('$base/otel_flutter_queue');
+    : _dir = Directory('$base/otel_flutter_queue');
 
   final Directory _dir;
   final int _maxBytes;
@@ -127,9 +129,13 @@ final class _FileStore implements OfflineStore {
   Future<void> save(Payload payload) async {
     try {
       await _dir.create(recursive: true);
-      final ts = DateTime.now().microsecondsSinceEpoch.toString().padLeft(17, '0');
+      final ts = DateTime.now().microsecondsSinceEpoch.toString().padLeft(
+        17,
+        '0',
+      );
       final seq = (_seq++ % 1000000).toString().padLeft(6, '0');
-      final name = '${ts}_$seq.${payload.signal.name}'
+      final name =
+          '${ts}_$seq.${payload.signal.name}'
           '${payload.gzipped ? '.gz' : ''}';
       final tmp = File('${_dir.path}/$name.tmp');
       await tmp.writeAsBytes(payload.bytes, flush: true);
@@ -166,7 +172,8 @@ final class _FileStore implements OfflineStore {
   }
 
   @override
-  Future<void> delete(StoredPayload stored) => _tryDelete(stored.handle as File);
+  Future<void> delete(StoredPayload stored) =>
+      _tryDelete(stored.handle as File);
 
   int _cutoffMicros() =>
       DateTime.now().subtract(_maxAge).microsecondsSinceEpoch;

@@ -57,8 +57,7 @@ void main() {
       for (final s in pipeline.ended) {
         expect(s.statusCode, SpanStatusCode.error);
         expect(s.events.single.name, 'exception');
-        expect(s.events.single.attributes.values['exception.type'],
-            isNotEmpty);
+        expect(s.events.single.attributes.values['exception.type'], isNotEmpty);
         expect(s.endMicros, isNotNull);
       }
     });
@@ -96,12 +95,17 @@ void main() {
 
     test('caller-owned lists cannot change recorded attributes', () {
       final tags = ['a'];
-      final s = tracer.startSpan('x', attributes: {'tags': tags})
-          as RecordingSpan;
+      final s =
+          tracer.startSpan('x', attributes: {'tags': tags}) as RecordingSpan;
       tags.add('b');
       expect(s.attributes.values['tags'], ['a']);
       // A const list works too (no UnsupportedError on later appends).
-      final c = tracer.startSpan('y', attributes: {'tags': const ['z']});
+      final c = tracer.startSpan(
+        'y',
+        attributes: {
+          'tags': const ['z'],
+        },
+      );
       c.addEvent('ok');
     });
 
@@ -109,8 +113,9 @@ void main() {
       Pipeline.current = FakePipeline(
         limits: const TelemetryLimits(maxAttributes: 2, maxAttributeLength: 3),
       );
-      final s = tracer.startSpan('x',
-          attributes: {'a': 'abcdef', 'b': 2, 'c': 3}) as RecordingSpan;
+      final s =
+          tracer.startSpan('x', attributes: {'a': 'abcdef', 'b': 2, 'c': 3})
+              as RecordingSpan;
       expect(s.attributes.values, {'a': 'abc', 'b': 2});
       expect(s.attributes.dropped, 1);
       s.setAttribute('a', 'xyz');
@@ -119,8 +124,8 @@ void main() {
 
     test('common attributes are applied before span attributes', () {
       pipeline.common = {'session.id': 's1', 'k': 'common'};
-      final s = tracer.startSpan('x', attributes: {'k': 'own'})
-          as RecordingSpan;
+      final s =
+          tracer.startSpan('x', attributes: {'k': 'own'}) as RecordingSpan;
       expect(s.attributes.values, {'session.id': 's1', 'k': 'own'});
     });
 
@@ -169,10 +174,11 @@ void main() {
     const header = '00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01';
 
     test('extract then inject round-trips', () {
-      final ctx = W3CPropagator.extract(
-        {'TraceParent': header, 'tracestate': 'a=1', 'baggage': 'user=jo%20e'},
-        context: OtelContext.root,
-      );
+      final ctx = W3CPropagator.extract({
+        'TraceParent': header,
+        'tracestate': 'a=1',
+        'baggage': 'user=jo%20e',
+      }, context: OtelContext.root);
       final sc = ctx.span!.spanContext;
       expect(sc.isRemote, isTrue);
       expect(sc.isSampled, isTrue);
@@ -187,13 +193,16 @@ void main() {
     });
 
     test('child span headers carry the child span id', () {
-      final parent = W3CPropagator.extract({'traceparent': header},
-          context: OtelContext.root);
+      final parent = W3CPropagator.extract({
+        'traceparent': header,
+      }, context: OtelContext.root);
       final child = tracer.startSpan('c', context: parent);
       final out = <String, String>{};
       W3CPropagator.inject(out, context: parent.withSpan(child));
-      expect(out['traceparent'],
-          '00-0af7651916cd43dd8448eb211c80319c-${child.spanContext.spanIdHex}-01');
+      expect(
+        out['traceparent'],
+        '00-0af7651916cd43dd8448eb211c80319c-${child.spanContext.spanIdHex}-01',
+      );
     });
 
     test('rejects malformed traceparent values', () {
@@ -214,16 +223,16 @@ void main() {
     test('accepts a future version with extra fields', () {
       expect(
         W3CPropagator.parseTraceparent(
-            '01-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01-future'),
+          '01-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01-future',
+        ),
         isNotNull,
       );
     });
 
     test('baggage ignores properties, bad keys and bad encoding', () {
-      final ctx = W3CPropagator.extract(
-        {'baggage': 'a=1;prop=x, b = 2 ,bad key=3,c=%zz,=4'},
-        context: OtelContext.root,
-      );
+      final ctx = W3CPropagator.extract({
+        'baggage': 'a=1;prop=x, b = 2 ,bad key=3,c=%zz,=4',
+      }, context: OtelContext.root);
       expect(ctx.baggage, {'a': '1', 'b': '2'});
     });
 
@@ -275,8 +284,11 @@ void main() {
       }
       expect(
         Ids.uuidV4(),
-        matches(RegExp(
-            r'^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$')),
+        matches(
+          RegExp(
+            r'^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$',
+          ),
+        ),
       );
     });
   });

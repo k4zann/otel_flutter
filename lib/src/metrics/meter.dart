@@ -33,8 +33,7 @@ final class Meter {
     String name, {
     String? unit,
     String? description,
-  }) =>
-      _get(name, () => UpDownCounter._(this, name, unit, description));
+  }) => _get(name, () => UpDownCounter._(this, name, unit, description));
 
   /// Distribution of values, e.g. latency. [boundaries] are bucket upper
   /// bounds; the default suits milliseconds.
@@ -43,12 +42,16 @@ final class Meter {
     String? unit,
     String? description,
     List<double>? boundaries,
-  }) =>
-      _get(
-        name,
-        () => Histogram._(this, name, unit, description,
-            boundaries ?? Histogram.defaultBoundaries),
-      );
+  }) => _get(
+    name,
+    () => Histogram._(
+      this,
+      name,
+      unit,
+      description,
+      boundaries ?? Histogram.defaultBoundaries,
+    ),
+  );
 
   /// Last recorded value, e.g. current screen brightness.
   Gauge gauge(String name, {String? unit, String? description}) =>
@@ -60,17 +63,21 @@ final class Meter {
     void Function(ObservableResult result) callback, {
     String? unit,
     String? description,
-  }) =>
-      _get(name, () => ObservableGauge._(this, name, unit, description, callback));
+  }) => _get(
+    name,
+    () => ObservableGauge._(this, name, unit, description, callback),
+  );
 
   T _get<T extends Instrument>(String name, T Function() create) {
     final key = name.toLowerCase();
     final existing = _instruments[key];
     if (existing is T) return existing;
     if (existing != null) {
-      Diagnostics.warnOnce('instrument-kind-$key',
-          'Instrument "$name" already exists as ${existing.runtimeType}; '
-          'creating a separate $T with the same name.');
+      Diagnostics.warnOnce(
+        'instrument-kind-$key',
+        'Instrument "$name" already exists as ${existing.runtimeType}; '
+            'creating a separate $T with the same name.',
+      );
       return (_instruments['$key#$T'] ??= create()) as T;
     }
     return _instruments[key] = create();
@@ -96,8 +103,7 @@ abstract final class MeterRegistry {
     final instruments = [
       for (final m in meters.values) ...m._instruments.values,
     ];
-    final changed =
-        instruments.any((i) => i._dirty || i is ObservableGauge);
+    final changed = instruments.any((i) => i._dirty || i is ObservableGauge);
     if (!changed) return const [];
     final now = Clock.nowMicros();
     final out = <MetricData>[];
@@ -199,12 +205,13 @@ sealed class Instrument {
         ? _intervalStart
         : Clock.nowMicros();
     if (_points.length >= MeterRegistry.cardinalityLimit - 1) {
-      Diagnostics.warnOnce('cardinality-$name',
-          'Metric "$name" exceeded ${MeterRegistry.cardinalityLimit} '
-          'attribute sets; extra values go to otel.metric.overflow. Avoid '
-          'unbounded attribute values such as ids or URLs.');
-      return _points[_overflowKey] ??=
-          _newPoint(_overflowAttributes, start);
+      Diagnostics.warnOnce(
+        'cardinality-$name',
+        'Metric "$name" exceeded ${MeterRegistry.cardinalityLimit} '
+            'attribute sets; extra values go to otel.metric.overflow. Avoid '
+            'unbounded attribute values such as ids or URLs.',
+      );
+      return _points[_overflowKey] ??= _newPoint(_overflowAttributes, start);
     }
     return _points[key] = _newPoint(_normalized(attributes), start);
   }
@@ -229,11 +236,13 @@ sealed class Instrument {
       if (v == null) continue;
       sb
         ..write(k)
-        ..write(v is String
-            ? '\u0001s'
-            : v is int
-                ? '\u0001i'
-                : '\u0001o')
+        ..write(
+          v is String
+              ? '\u0001s'
+              : v is int
+              ? '\u0001i'
+              : '\u0001o',
+        )
         ..write(v)
         ..write('\u0002');
     }
@@ -288,7 +297,7 @@ final class _SumPoint extends _Point {
 
 final class _HistogramPoint extends _Point {
   _HistogramPoint(super.attributes, super.startMicros, int buckets)
-      : counts = List<int>.filled(buckets, 0);
+    : counts = List<int>.filled(buckets, 0);
   final List<int> counts;
   int count = 0;
   double sum = 0;
@@ -304,7 +313,7 @@ final class _GaugePoint extends _Point {
 
 abstract class _SumInstrument extends Instrument {
   _SumInstrument(super.meter, super.name, super.unit, super.description)
-      : super._();
+    : super._();
 
   bool get _isMonotonic;
 
@@ -323,16 +332,16 @@ abstract class _SumInstrument extends Instrument {
 
   @override
   MetricData? _collect(int now) => _collectPoints(
-        now,
-        MetricKind.sum,
-        _isMonotonic,
-        (p, now) => MetricPoint(
-          attributes: p.attributes,
-          startMicros: p.startMicros,
-          timeMicros: now,
-          value: (p as _SumPoint).value,
-        ),
-      );
+    now,
+    MetricKind.sum,
+    _isMonotonic,
+    (p, now) => MetricPoint(
+      attributes: p.attributes,
+      startMicros: p.startMicros,
+      timeMicros: now,
+      value: (p as _SumPoint).value,
+    ),
+  );
 }
 
 final class Counter extends _SumInstrument {
@@ -343,8 +352,10 @@ final class Counter extends _SumInstrument {
 
   void add(num value, [Map<String, Object?>? attributes]) {
     if (value < 0) {
-      Diagnostics.warnOnce('counter-negative-$name',
-          'Counter "$name" got a negative value; use an UpDownCounter.');
+      Diagnostics.warnOnce(
+        'counter-negative-$name',
+        'Counter "$name" got a negative value; use an UpDownCounter.',
+      );
       return;
     }
     _add(value, attributes);
@@ -368,12 +379,26 @@ final class Histogram extends Instrument {
     super.unit,
     super.description,
     List<double> boundaries,
-  )   : boundaries = List.unmodifiable(boundaries.toList()..sort()),
-        super._();
+  ) : boundaries = List.unmodifiable(boundaries.toList()..sort()),
+      super._();
 
   /// OpenTelemetry's default explicit bucket bounds.
   static const defaultBoundaries = <double>[
-    0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000,
+    0,
+    5,
+    10,
+    25,
+    50,
+    75,
+    100,
+    250,
+    500,
+    750,
+    1000,
+    2500,
+    5000,
+    7500,
+    10000,
   ];
 
   final List<double> boundaries;
@@ -401,25 +426,21 @@ final class Histogram extends Instrument {
       _HistogramPoint(attributes, startMicros, boundaries.length + 1);
 
   @override
-  MetricData? _collect(int now) => _collectPoints(
-        now,
-        MetricKind.histogram,
-        false,
-        (point, now) {
-          final p = point as _HistogramPoint;
-          return MetricPoint(
-            attributes: p.attributes,
-            startMicros: p.startMicros,
-            timeMicros: now,
-            bucketCounts: List.of(p.counts),
-            boundaries: boundaries,
-            count: p.count,
-            sum: p.sum,
-            min: p.count > 0 ? p.min : null,
-            max: p.count > 0 ? p.max : null,
-          );
-        },
-      );
+  MetricData? _collect(int now) =>
+      _collectPoints(now, MetricKind.histogram, false, (point, now) {
+        final p = point as _HistogramPoint;
+        return MetricPoint(
+          attributes: p.attributes,
+          startMicros: p.startMicros,
+          timeMicros: now,
+          bucketCounts: List.of(p.counts),
+          boundaries: boundaries,
+          count: p.count,
+          sum: p.sum,
+          min: p.count > 0 ? p.min : null,
+          max: p.count > 0 ? p.max : null,
+        );
+      });
 }
 
 final class Gauge extends Instrument {
@@ -501,8 +522,10 @@ final class ObservableGauge extends Instrument {
     try {
       _callback(result);
     } catch (e) {
-      Diagnostics.warnOnce('observable-$name',
-          'Callback of observable gauge "$name" threw: $e');
+      Diagnostics.warnOnce(
+        'observable-$name',
+        'Callback of observable gauge "$name" threw: $e',
+      );
       return null;
     }
     if (result._observations.isEmpty) return null;
@@ -511,12 +534,14 @@ final class ObservableGauge extends Instrument {
     // Iterate newest first so a repeated attribute set keeps its last value.
     for (final (value, attrs) in result._observations.reversed) {
       if (!seen.add(Instrument._keyOf(attrs))) continue;
-      points.add(MetricPoint(
-        attributes: Instrument._normalized(attrs),
-        startMicros: null,
-        timeMicros: now,
-        value: value,
-      ));
+      points.add(
+        MetricPoint(
+          attributes: Instrument._normalized(attrs),
+          startMicros: null,
+          timeMicros: now,
+          value: value,
+        ),
+      );
     }
     return MetricData(
       scope: meter.scope,

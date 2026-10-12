@@ -49,18 +49,20 @@ final class Logger {
 
     final now = Clock.nowMicros();
     final spanContext = (context ?? OtelContext.current).span?.spanContext;
-    pipeline.onLogRecord(LogRecordData(
-      scope: scope,
-      timeMicros: timestamp?.microsecondsSinceEpoch ?? now,
-      observedMicros: now,
-      severity: severity,
-      body: _normalizeBody(body, limits.maxAttributeLength, 0),
-      attributes: attrs,
-      eventName: eventName,
-      spanContext: spanContext != null && spanContext.isValid
-          ? spanContext
-          : null,
-    ));
+    pipeline.onLogRecord(
+      LogRecordData(
+        scope: scope,
+        timeMicros: timestamp?.microsecondsSinceEpoch ?? now,
+        observedMicros: now,
+        severity: severity,
+        body: _normalizeBody(body, limits.maxAttributeLength, 0),
+        attributes: attrs,
+        eventName: eventName,
+        spanContext: spanContext != null && spanContext.isValid
+            ? spanContext
+            : null,
+      ),
+    );
   }
 
   void trace(String message, {Map<String, Object?>? attributes}) =>
@@ -77,42 +79,39 @@ final class Logger {
     Map<String, Object?>? attributes,
     Object? error,
     StackTrace? stackTrace,
-  }) =>
-      emit(
-        severity: Severity.warn,
-        body: message,
-        attributes: attributes,
-        error: error,
-        stackTrace: stackTrace,
-      );
+  }) => emit(
+    severity: Severity.warn,
+    body: message,
+    attributes: attributes,
+    error: error,
+    stackTrace: stackTrace,
+  );
 
   void error(
     String message, {
     Map<String, Object?>? attributes,
     Object? error,
     StackTrace? stackTrace,
-  }) =>
-      emit(
-        severity: Severity.error,
-        body: message,
-        attributes: attributes,
-        error: error,
-        stackTrace: stackTrace,
-      );
+  }) => emit(
+    severity: Severity.error,
+    body: message,
+    attributes: attributes,
+    error: error,
+    stackTrace: stackTrace,
+  );
 
   void fatal(
     String message, {
     Map<String, Object?>? attributes,
     Object? error,
     StackTrace? stackTrace,
-  }) =>
-      emit(
-        severity: Severity.fatal,
-        body: message,
-        attributes: attributes,
-        error: error,
-        stackTrace: stackTrace,
-      );
+  }) => emit(
+    severity: Severity.fatal,
+    body: message,
+    attributes: attributes,
+    error: error,
+    stackTrace: stackTrace,
+  );
 
   static Object? _normalizeBody(Object? body, int? maxLength, int depth) {
     if (body is Map && depth < 8) {
