@@ -23,8 +23,8 @@ class OtelHttpClient extends http.BaseClient {
     http.Client? inner,
     bool Function(Uri url)? propagateTo,
     this.captureQuery = false,
-  })  : _inner = inner ?? http.Client(),
-        _propagateTo = propagateTo;
+  }) : _inner = inner ?? http.Client(),
+       _propagateTo = propagateTo;
 
   final http.Client _inner;
   final bool Function(Uri url)? _propagateTo;
@@ -34,13 +34,25 @@ class OtelHttpClient extends http.BaseClient {
   final bool captureQuery;
 
   static final Tracer _tracer = Tracer.of('otel_flutter.http');
-  static final Histogram _duration =
-      Meter.of('otel_flutter.http').histogram(
+  static final Histogram _duration = Meter.of('otel_flutter.http').histogram(
     'http.client.request.duration',
     unit: 's',
     description: 'Duration of HTTP client requests.',
     boundaries: const [
-      0.005, 0.01, 0.025, 0.05, 0.075, 0.1, 0.25, 0.5, 0.75, 1, 2.5, 5, 7.5, 10,
+      0.005,
+      0.01,
+      0.025,
+      0.05,
+      0.075,
+      0.1,
+      0.25,
+      0.5,
+      0.75,
+      1,
+      2.5,
+      5,
+      7.5,
+      10,
     ],
   );
 
@@ -103,12 +115,12 @@ class OtelHttpClient extends http.BaseClient {
 
   /// Drops credentials, fragment and (by default) the query string.
   String _redact(Uri url) => Uri(
-        scheme: url.scheme,
-        host: url.host,
-        port: url.hasPort ? url.port : null,
-        path: url.path,
-        query: captureQuery && url.hasQuery ? url.query : null,
-      ).toString();
+    scheme: url.scheme,
+    host: url.host,
+    port: url.hasPort ? url.port : null,
+    path: url.path,
+    query: captureQuery && url.hasQuery ? url.query : null,
+  ).toString();
 
   @override
   void close() => _inner.close();

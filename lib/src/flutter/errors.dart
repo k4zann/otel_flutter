@@ -91,9 +91,11 @@ final class ErrorReporter {
       _inWindow = 0;
     }
     if (++_inWindow > _maxLogsPerMinute) {
-      Diagnostics.warnOnce('error-flood',
-          'More than $_maxLogsPerMinute errors/minute; extra error logs are '
-          'skipped (still counted in app.errors).');
+      Diagnostics.warnOnce(
+        'error-flood',
+        'More than $_maxLogsPerMinute errors/minute; extra error logs are '
+            'skipped (still counted in app.errors).',
+      );
       return;
     }
 

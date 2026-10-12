@@ -43,10 +43,10 @@ final class ScreenTracker {
   }
 
   Span _start(String name) => _tracer.startSpan(
-        'screen $name',
-        newRoot: true,
-        attributes: {'app.screen.name': name},
-      );
+    'screen $name',
+    newRoot: true,
+    attributes: {'app.screen.name': name},
+  );
 
   @visibleForTesting
   void reset() {
@@ -66,8 +66,8 @@ class OtelNavigatorObserver extends NavigatorObserver {
   OtelNavigatorObserver({
     bool Function(Route<dynamic> route)? routeFilter,
     String? Function(Route<dynamic> route)? screenName,
-  })  : _filter = routeFilter ?? _isPage,
-        _nameOf = screenName ?? _settingsName;
+  }) : _filter = routeFilter ?? _isPage,
+       _nameOf = screenName ?? _settingsName;
 
   final bool Function(Route<dynamic> route) _filter;
   final String? Function(Route<dynamic> route) _nameOf;

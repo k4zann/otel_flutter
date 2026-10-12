@@ -14,7 +14,7 @@ import 'package:meta/meta.dart';
 @internal
 final class ProtoWriter {
   ProtoWriter([int initialCapacity = 16384])
-      : _buf = Uint8List(initialCapacity) {
+    : _buf = Uint8List(initialCapacity) {
     _view = ByteData.view(_buf.buffer);
   }
 

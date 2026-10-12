@@ -40,7 +40,7 @@ abstract final class Otel {
   static FrameMonitor? _frames;
   static StallDetector? _stalls;
   static Future<void> Function(PreviousRunContext? previous)?
-      _nativeCrashReporter;
+  _nativeCrashReporter;
 
   static final Span _noSpan = NonRecordingSpan(SpanContext.invalid);
 
@@ -98,14 +98,12 @@ abstract final class Otel {
   /// replaces an earlier one.
   static void registerNativeCrashReporter(
     Future<void> Function(PreviousRunContext? previous) onInit,
-  ) =>
-      _nativeCrashReporter = onInit;
+  ) => _nativeCrashReporter = onInit;
 
   static Tracer tracer(String name, {String? version}) =>
       Tracer.of(name, version);
 
-  static Meter meter(String name, {String? version}) =>
-      Meter.of(name, version);
+  static Meter meter(String name, {String? version}) => Meter.of(name, version);
 
   static Logger logger(String name, {String? version}) =>
       Logger.of(name, version);
@@ -139,22 +137,20 @@ abstract final class Otel {
     StackTrace? stackTrace, {
     bool fatal = false,
     Map<String, Object?>? attributes,
-  }) =>
-      _errors?.report(
-        error,
-        stackTrace,
-        source: 'manual',
-        fatal: fatal,
-        attributes: attributes,
-      );
+  }) => _errors?.report(
+    error,
+    stackTrace,
+    source: 'manual',
+    fatal: fatal,
+    attributes: attributes,
+  );
 
   /// Adds W3C `traceparent`/`baggage` headers for the active span, for HTTP
   /// clients other than [OtelHttpClient] (e.g. a Dio interceptor).
   static void injectTraceHeaders(
     Map<String, String> headers, {
     OtelContext? context,
-  }) =>
-      W3CPropagator.inject(headers, context: context);
+  }) => W3CPropagator.inject(headers, context: context);
 
   /// Exports everything buffered. Useful before a planned exit.
   static Future<void> flush({Duration timeout = const Duration(seconds: 10)}) =>
@@ -195,7 +191,9 @@ abstract final class Otel {
       await reporter(previous);
     } catch (e) {
       Diagnostics.warnOnce(
-          'native-crashes', 'Native crash reporting failed: $e');
+        'native-crashes',
+        'Native crash reporting failed: $e',
+      );
     }
   }
 
@@ -220,7 +218,16 @@ abstract final class Otel {
           unit: 'ms',
           description: 'Time from Otel.init to the first rasterized frame.',
           boundaries: const [
-            100, 250, 500, 750, 1000, 1500, 2000, 3000, 5000, 10000,
+            100,
+            250,
+            500,
+            750,
+            1000,
+            1500,
+            2000,
+            3000,
+            5000,
+            10000,
           ],
         )
         .record(durationMs);

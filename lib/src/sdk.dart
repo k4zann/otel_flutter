@@ -26,12 +26,16 @@ import 'trace/span.dart';
 /// Flutter-independent; the Flutter integration drives it.
 @internal
 final class OtelSdk implements Pipeline {
-  OtelSdk._(this.config, this.resource, this._exporter, this._client,
-      this._ownsClient)
-      : _resourceBytes = OtlpEncoder.encodeResource(resource),
-        sampler = Sampler(config.sampleRatio),
-        limits = config.limits,
-        session = Session(config.sessionTimeout) {
+  OtelSdk._(
+    this.config,
+    this.resource,
+    this._exporter,
+    this._client,
+    this._ownsClient,
+  ) : _resourceBytes = OtlpEncoder.encodeResource(resource),
+      sampler = Sampler(config.sampleRatio),
+      limits = config.limits,
+      session = Session(config.sessionTimeout) {
     spans = BatchQueue<RecordingSpan>(
       name: 'span',
       maxQueueSize: config.maxQueueSize,
@@ -75,9 +79,11 @@ final class OtelSdk implements Pipeline {
       for (final s in Signal.values) s: _endpointFor(config, s),
     };
     if (endpoints.values.any((u) => u.port == 4317)) {
-      Diagnostics.warnOnce('grpc-port',
-          'Port 4317 is OTLP/gRPC. This SDK sends OTLP/HTTP, which collectors '
-          'serve on port 4318.');
+      Diagnostics.warnOnce(
+        'grpc-port',
+        'Port 4317 is OTLP/gRPC. This SDK sends OTLP/HTTP, which collectors '
+            'serve on port 4318.',
+      );
     }
     final headers = {
       ...OtelEnvironment.parseList(OtelEnvironment.headers),
@@ -117,18 +123,27 @@ final class OtelSdk implements Pipeline {
       maxAttempts: config.maxExportAttempts,
       store: dir == null
           ? null
-          : createOfflineStore(dir,
+          : createOfflineStore(
+              dir,
               maxBytes: config.maxOfflineStorageBytes,
-              maxAge: config.maxOfflineAge),
+              maxAge: config.maxOfflineAge,
+            ),
     );
 
     final sdk = OtelSdk._(
-        config, resource, exporter, client, config.httpClient == null);
+      config,
+      resource,
+      exporter,
+      client,
+      config.httpClient == null,
+    );
     if (keepCrashContext && dir != null) {
-      sdk._previousRun =
-          CrashContextWriter.decode(await rotateCrashContext(dir));
-      sdk._crashContext =
-          CrashContextWriter((json) => writeCrashContext(dir, json));
+      sdk._previousRun = CrashContextWriter.decode(
+        await rotateCrashContext(dir),
+      );
+      sdk._crashContext = CrashContextWriter(
+        (json) => writeCrashContext(dir, json),
+      );
     }
     Pipeline.current = sdk;
     MeterRegistry.temporality = config.metricTemporality;
@@ -238,10 +253,13 @@ final class OtelSdk implements Pipeline {
       exportMetrics(urgent: urgent),
     ]);
     if (timeout == null) return all;
-    return all.timeout(timeout, onTimeout: () {
-      Diagnostics.debug('flush timed out after ${timeout.inSeconds}s');
-      return const [];
-    });
+    return all.timeout(
+      timeout,
+      onTimeout: () {
+        Diagnostics.debug('flush timed out after ${timeout.inSeconds}s');
+        return const [];
+      },
+    );
   }
 
   /// Collects metrics and exports them if anything changed.
@@ -264,7 +282,9 @@ final class OtelSdk implements Pipeline {
     }
   }
 
-  Future<void> shutdown({Duration timeout = const Duration(seconds: 10)}) async {
+  Future<void> shutdown({
+    Duration timeout = const Duration(seconds: 10),
+  }) async {
     if (_shutdown) return;
     _metricTimer?.cancel();
     _metricTimer = null;
@@ -290,9 +310,7 @@ final class OtelSdk implements Pipeline {
   void _emitSessionStart(String? previousId) {
     _logger.emit(
       eventName: 'session.start',
-      attributes: {
-        'session.previous_id': ?previousId,
-      },
+      attributes: {'session.previous_id': ?previousId},
     );
   }
 
@@ -306,7 +324,8 @@ final class OtelSdk implements Pipeline {
       Signal.logs => c.logsEndpoint ?? nonEmpty(OtelEnvironment.logsEndpoint),
     };
     if (specific != null) return _parseEndpoint(specific);
-    var base = c.endpoint ??
+    var base =
+        c.endpoint ??
         nonEmpty(OtelEnvironment.endpoint) ??
         'http://localhost:4318';
     if (!base.endsWith('/')) base = '$base/';
@@ -318,8 +337,11 @@ final class OtelSdk implements Pipeline {
     if (uri == null ||
         (uri.scheme != 'http' && uri.scheme != 'https') ||
         uri.host.isEmpty) {
-      throw ArgumentError.value(url, 'endpoint',
-          'must be an http(s) URL such as https://otlp.example.com');
+      throw ArgumentError.value(
+        url,
+        'endpoint',
+        'must be an http(s) URL such as https://otlp.example.com',
+      );
     }
     return uri;
   }

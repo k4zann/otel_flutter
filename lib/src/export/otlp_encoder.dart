@@ -133,7 +133,10 @@ abstract final class OtlpEncoder {
       if (link.attributes.dropped > 0) {
         w.varintField(5, link.attributes.dropped);
       }
-      w.fixed32Field(6, _spanFlags(link.context.traceFlags, link.context.isRemote));
+      w.fixed32Field(
+        6,
+        _spanFlags(link.context.traceFlags, link.context.isRemote),
+      );
       w.end(l);
     }
     if (span.droppedLinks > 0) w.varintField(14, span.droppedLinks);
@@ -165,8 +168,7 @@ abstract final class OtlpEncoder {
     }
     final unit = metric.unit;
     if (unit != null && unit.isNotEmpty) w.stringField(3, unit);
-    final temporality =
-        metric.temporality == MetricTemporality.delta ? 1 : 2;
+    final temporality = metric.temporality == MetricTemporality.delta ? 1 : 2;
     switch (metric.kind) {
       case MetricKind.sum:
         final sum = w.begin(7);

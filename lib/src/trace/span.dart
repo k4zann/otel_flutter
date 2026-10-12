@@ -61,8 +61,10 @@ final class SpanContext {
     );
   }
 
-  static final SpanContext invalid =
-      SpanContext.raw(traceId: Uint8List(16), spanId: Uint8List(8));
+  static final SpanContext invalid = SpanContext.raw(
+    traceId: Uint8List(16),
+    spanId: Uint8List(8),
+  );
 
   final Uint8List traceId;
   final Uint8List spanId;
@@ -77,7 +79,8 @@ final class SpanContext {
   late final String spanIdHex = Ids.toHex(spanId);
 
   @override
-  String toString() => 'SpanContext($traceIdHex/$spanIdHex, '
+  String toString() =>
+      'SpanContext($traceIdHex/$spanIdHex, '
       'sampled: $isSampled, remote: $isRemote)';
 }
 
@@ -176,9 +179,11 @@ final class RecordingSpan implements Span {
     required this.startMicros,
     required this.limits,
     required void Function(RecordingSpan span) onEnd,
-  })  : _onEnd = onEnd,
-        attributes =
-            AttributeMap(limits.maxAttributes, limits.maxAttributeLength);
+  }) : _onEnd = onEnd,
+       attributes = AttributeMap(
+         limits.maxAttributes,
+         limits.maxAttributeLength,
+       );
 
   @override
   final SpanContext spanContext;
@@ -224,12 +229,14 @@ final class RecordingSpan implements Span {
       droppedEvents++;
       return;
     }
-    events.add(SpanEvent(
-      name,
-      timestamp?.microsecondsSinceEpoch ?? Clock.nowMicros(),
-      AttributeMap(limits.maxAttributes, limits.maxAttributeLength)
-        ..setAll(attributes),
-    ));
+    events.add(
+      SpanEvent(
+        name,
+        timestamp?.microsecondsSinceEpoch ?? Clock.nowMicros(),
+        AttributeMap(limits.maxAttributes, limits.maxAttributeLength)
+          ..setAll(attributes),
+      ),
+    );
   }
 
   @override
@@ -239,11 +246,13 @@ final class RecordingSpan implements Span {
       droppedLinks++;
       return;
     }
-    links.add(SpanLink(
-      context,
-      AttributeMap(limits.maxAttributes, limits.maxAttributeLength)
-        ..setAll(attributes),
-    ));
+    links.add(
+      SpanLink(
+        context,
+        AttributeMap(limits.maxAttributes, limits.maxAttributeLength)
+          ..setAll(attributes),
+      ),
+    );
   }
 
   @override
@@ -252,12 +261,15 @@ final class RecordingSpan implements Span {
     StackTrace? stackTrace,
     Map<String, Object?>? attributes,
   }) {
-    addEvent('exception', attributes: {
-      'exception.type': exception.runtimeType.toString(),
-      'exception.message': exception.toString(),
-      if (stackTrace != null) 'exception.stacktrace': stackTrace.toString(),
-      ...?attributes,
-    });
+    addEvent(
+      'exception',
+      attributes: {
+        'exception.type': exception.runtimeType.toString(),
+        'exception.message': exception.toString(),
+        if (stackTrace != null) 'exception.stacktrace': stackTrace.toString(),
+        ...?attributes,
+      },
+    );
   }
 
   @override

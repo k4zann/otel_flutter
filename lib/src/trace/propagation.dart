@@ -17,8 +17,7 @@ abstract final class W3CPropagator {
     final sc = ctx.span?.spanContext;
     if (sc != null && sc.isValid) {
       final flags = (sc.traceFlags & 0xFF).toRadixString(16).padLeft(2, '0');
-      headers[traceparentHeader] =
-          '00-${sc.traceIdHex}-${sc.spanIdHex}-$flags';
+      headers[traceparentHeader] = '00-${sc.traceIdHex}-${sc.spanIdHex}-$flags';
       final state = sc.traceState;
       if (state != null && state.isNotEmpty) {
         headers[tracestateHeader] = state;

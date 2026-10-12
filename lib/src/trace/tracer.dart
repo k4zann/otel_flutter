@@ -35,8 +35,9 @@ final class Tracer {
     DateTime? startTime,
     bool newRoot = false,
   }) {
-    final parent =
-        newRoot ? null : (context ?? OtelContext.current).span?.spanContext;
+    final parent = newRoot
+        ? null
+        : (context ?? OtelContext.current).span?.spanContext;
     final validParent = parent != null && parent.isValid ? parent : null;
 
     final pipeline = Pipeline.current;
@@ -46,8 +47,10 @@ final class Tracer {
     }
 
     final traceId = validParent?.traceId ?? Ids.traceId();
-    final sampled = pipeline.sampler
-        .shouldSample(traceId, parentSampled: validParent?.isSampled);
+    final sampled = pipeline.sampler.shouldSample(
+      traceId,
+      parentSampled: validParent?.isSampled,
+    );
     final spanContext = SpanContext.raw(
       traceId: traceId,
       spanId: Ids.spanId(),
@@ -83,14 +86,20 @@ final class Tracer {
     OtelContext? context,
   }) {
     final parent = context ?? OtelContext.current;
-    final span = startSpan(name,
-        kind: kind, attributes: attributes, context: parent);
+    final span = startSpan(
+      name,
+      kind: kind,
+      attributes: attributes,
+      context: parent,
+    );
     try {
       final result = parent.withSpan(span).run(() => fn(span));
       if (result is Future) {
-        Diagnostics.warnOnce('trace-future',
-            'Tracer.trace("$name") returned a Future; use traceAsync so the '
-            'span covers the async work.');
+        Diagnostics.warnOnce(
+          'trace-future',
+          'Tracer.trace("$name") returned a Future; use traceAsync so the '
+              'span covers the async work.',
+        );
       }
       return result;
     } catch (e, st) {
@@ -110,8 +119,12 @@ final class Tracer {
     OtelContext? context,
   }) async {
     final parent = context ?? OtelContext.current;
-    final span = startSpan(name,
-        kind: kind, attributes: attributes, context: parent);
+    final span = startSpan(
+      name,
+      kind: kind,
+      attributes: attributes,
+      context: parent,
+    );
     try {
       return await parent.withSpan(span).run(() => fn(span));
     } catch (e, st) {

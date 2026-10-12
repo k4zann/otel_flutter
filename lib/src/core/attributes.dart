@@ -51,8 +51,8 @@ abstract final class AttributeValues {
 
   static String _truncate(String s, int? maxLength) =>
       maxLength == null || s.length <= maxLength
-          ? s
-          : s.substring(0, maxLength);
+      ? s
+      : s.substring(0, maxLength);
 }
 
 /// A bounded attribute map that counts what it had to drop.

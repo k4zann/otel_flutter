@@ -8,7 +8,7 @@ import 'package:otel_flutter/src/trace/span.dart';
 /// Records what the API layer hands to the SDK.
 final class FakePipeline implements Pipeline {
   FakePipeline({double ratio = 1.0, this.limits = const TelemetryLimits()})
-      : sampler = Sampler(ratio);
+    : sampler = Sampler(ratio);
 
   @override
   final Sampler sampler;
