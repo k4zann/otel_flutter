@@ -42,8 +42,9 @@ final logger = Otel.logger('example');
 final clicks = Otel.meter('example').counter('example.button.clicks');
 final api = OtelHttpClient();
 
-/// Crashes and freezes the app natively (see MainActivity / AppDelegate),
-/// reported by otel_flutter_native on the next launch.
+/// Crashes and freezes the app natively (see MainActivity / AppDelegate).
+/// Crashes and Android ANRs are reported by otel_flutter_native on the next
+/// launch; an iOS freeze shows up as a UI stall once the app resumes.
 const native = MethodChannel('example/native');
 
 class ExampleApp extends StatelessWidget {
@@ -130,12 +131,22 @@ class _HomeScreenState extends State<HomeScreen> {
     unawaited(native.invokeMethod<void>('crash'));
   }
 
-  void _anr() {
+  Future<void> _anr() async {
     clicks.add(1, {'button': 'anr'});
     _show(
-      'Main thread blocked for 20 s: tap the screen, then choose "Close app".',
+      defaultTargetPlatform == TargetPlatform.android
+          ? 'Main thread blocked for 20 s: tap the screen, '
+                'then choose "Close app".'
+          // iOS has no ANR dialog; the app resumes on its own.
+          : 'Main thread blocked for 20 s. The app resumes by itself and '
+                'reports a UI stall.',
     );
-    unawaited(native.invokeMethod<void>('block'));
+    // Show the message before freezing: the platform call would otherwise
+    // run before the next frame, and iOS puts frames on screen through the
+    // main thread, so give it a moment after the frame is built.
+    await WidgetsBinding.instance.endOfFrame;
+    await Future<void>.delayed(const Duration(milliseconds: 100));
+    await native.invokeMethod<void>('block');
   }
 
   Future<void> _flush() async {

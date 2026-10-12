@@ -12,12 +12,22 @@ import UIKit
 
   func didInitializeImplicitFlutterEngine(_ engineBridge: FlutterImplicitEngineBridge) {
     GeneratedPluginRegistrant.register(with: engineBridge.pluginRegistry)
-    // Native crash for the "Native crash" button (reported on next launch).
+    // Native crash (reported on next launch) and main-thread freeze for the
+    // example's buttons.
     let messenger = engineBridge.pluginRegistry.registrar(forPlugin: "ExampleNative")!.messenger()
     FlutterMethodChannel(name: "example/native", binaryMessenger: messenger)
       .setMethodCallHandler { call, result in
-        if call.method == "crash" { fatalError("Native crash from the example") }
-        result(FlutterMethodNotImplemented)
+        switch call.method {
+        case "crash":
+          fatalError("Native crash from the example")
+        case "block":
+          // Same 20 s as Android. iOS shows no ANR dialog: the app resumes,
+          // and Dart (on the main thread too) reports the freeze as a stall.
+          Thread.sleep(forTimeInterval: 20)
+          result(nil)
+        default:
+          result(FlutterMethodNotImplemented)
+        }
       }
   }
 }
