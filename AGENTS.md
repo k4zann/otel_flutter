@@ -136,8 +136,16 @@ pending data goes to disk first, then is sent.
 * Behavior changes go through OpenSpec: `/opsx:propose` → `/opsx:apply` →
   `/opsx:archive`. Specs describe observable behavior, not class names.
   Update the matching spec in the same change.
-* Before finishing any task: `$FLUTTER analyze` clean and `$FLUTTER test`
-  green. Run e2e if export code changed.
+* Before finishing any task: `$DART format .` (no changes), `$FLUTTER analyze`
+  clean (infos count) and `$FLUTTER test` green. Run e2e if export code
+  changed. `DART=~/fvm/versions/3.44.2/bin/dart`; the version is pinned in
+  `.fvmrc`.
+* CI (`.github/workflows/ci.yml`, every PR and push to `main`) enforces it:
+  format, analyze with infos/warnings fatal, all Dart tests including e2e
+  against a collector container, the plugin's Kotlin tests
+  (`-Potel.warningsAsErrors`) and Swift tests (warnings in its sources
+  fail). `.githooks/pre-commit` runs the format and analyze checks
+  locally; enable once per clone with `git config core.hooksPath .githooks`.
 
 ## Gotchas learned the hard way
 

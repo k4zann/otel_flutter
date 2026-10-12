@@ -17,19 +17,34 @@ void main() {
     expect(write((w) => w.varintField(1, 127)), [0x08, 0x7F]);
     expect(write((w) => w.varintField(1, 300)), [0x08, 0xAC, 0x02]);
     // int64 -1 is ten bytes of two's complement.
-    expect(write((w) => w.varintField(1, -1)),
-        [0x08, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x01]);
+    expect(write((w) => w.varintField(1, -1)), [
+      0x08,
+      0xFF,
+      0xFF,
+      0xFF,
+      0xFF,
+      0xFF,
+      0xFF,
+      0xFF,
+      0xFF,
+      0xFF,
+      0x01,
+    ]);
   });
 
   test('64-bit values round-trip', () {
     const big = 0x123456789ABCDEF;
-    final m = Msg.parse(write((w) => w
-      ..varintField(1, big)
-      ..varintField(2, -123456789012)
-      ..fixed64Field(3, big)
-      ..sfixed64Field(4, -42)
-      ..doubleField(5, -1.5)
-      ..fixed32Field(6, 0xFFFFFFFF)));
+    final m = Msg.parse(
+      write(
+        (w) => w
+          ..varintField(1, big)
+          ..varintField(2, -123456789012)
+          ..fixed64Field(3, big)
+          ..sfixed64Field(4, -42)
+          ..doubleField(5, -1.5)
+          ..fixed32Field(6, 0xFFFFFFFF),
+      ),
+    );
     expect(m.varint(1), big);
     expect(m.varint(2), -123456789012);
     expect(m.fixed64(3), big);
@@ -45,10 +60,14 @@ void main() {
   });
 
   test('strings: ASCII fast path and UTF-8', () {
-    final m = Msg.parse(write((w) => w
-      ..stringField(1, 'hello')
-      ..stringField(2, 'Привет, 世界 👋')
-      ..stringField(3, '')));
+    final m = Msg.parse(
+      write(
+        (w) => w
+          ..stringField(1, 'hello')
+          ..stringField(2, 'Привет, 世界 👋')
+          ..stringField(3, ''),
+      ),
+    );
     expect(m.string(1), 'hello');
     expect(m.string(2), 'Привет, 世界 👋');
     expect(m.string(3), '');

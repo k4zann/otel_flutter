@@ -268,3 +268,12 @@ OTEL_E2E_ENDPOINT=http://localhost:4318 flutter test test/e2e   # against a real
 cd example && flutter run                                # demo app
 cd packages/otel_flutter_native && flutter test          # native crash plugin
 ```
+
+CI checks every pull request: formatting (`dart format`), the analyzer with
+infos and warnings treated as errors, all tests (including end-to-end against
+a real collector, and the plugin's Kotlin and Swift tests). Run the same
+format and analyzer checks before each commit with the bundled hook:
+
+```bash
+git config core.hooksPath .githooks   # once per clone
+```

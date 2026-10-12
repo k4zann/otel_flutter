@@ -44,9 +44,11 @@ final class BatchQueue<T> {
   void add(T item) {
     if (_queue.length >= maxQueueSize) {
       dropped++;
-      Diagnostics.warnOnce('queue-full-$name',
-          '$name queue is full ($maxQueueSize); dropping new items. The '
-          'endpoint is too slow or unreachable.');
+      Diagnostics.warnOnce(
+        'queue-full-$name',
+        '$name queue is full ($maxQueueSize); dropping new items. The '
+            'endpoint is too slow or unreachable.',
+      );
       return;
     }
     _queue.add(item);

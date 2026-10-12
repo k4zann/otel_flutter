@@ -21,16 +21,19 @@ String endpoint() {
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Otel.init(OtelConfig(
-    serviceName: 'otel-flutter-example',
-    serviceVersion: '1.0.0',
-    environment: kReleaseMode ? 'production' : 'development',
-    endpoint: endpoint(),
-    // Keeps unsent data on disk while offline (not available on web).
-    offlineStorageDirectory:
-        kIsWeb ? null : (await getApplicationSupportDirectory()).path,
-    debug: true,
-  ));
+  await Otel.init(
+    OtelConfig(
+      serviceName: 'otel-flutter-example',
+      serviceVersion: '1.0.0',
+      environment: kReleaseMode ? 'production' : 'development',
+      endpoint: endpoint(),
+      // Keeps unsent data on disk while offline (not available on web).
+      offlineStorageDirectory: kIsWeb
+          ? null
+          : (await getApplicationSupportDirectory()).path,
+      debug: true,
+    ),
+  );
   runApp(const ExampleApp());
 }
 
@@ -48,14 +51,14 @@ class ExampleApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => MaterialApp(
-        title: 'otel_flutter example',
-        theme: ThemeData(colorSchemeSeed: Colors.indigo),
-        navigatorObservers: [OtelNavigatorObserver()],
-        routes: {
-          '/': (_) => const HomeScreen(),
-          '/details': (_) => const DetailsScreen(),
-        },
-      );
+    title: 'otel_flutter example',
+    theme: ThemeData(colorSchemeSeed: Colors.indigo),
+    navigatorObservers: [OtelNavigatorObserver()],
+    routes: {
+      '/': (_) => const HomeScreen(),
+      '/details': (_) => const DetailsScreen(),
+    },
+  );
 }
 
 class HomeScreen extends StatefulWidget {
@@ -88,8 +91,9 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _httpRequest() async {
     clicks.add(1, {'button': 'http'});
     try {
-      final r = await api
-          .get(Uri.parse('https://jsonplaceholder.typicode.com/todos/1'));
+      final r = await api.get(
+        Uri.parse('https://jsonplaceholder.typicode.com/todos/1'),
+      );
       _show('HTTP ${r.statusCode}: traced, with traceparent header.');
     } catch (e) {
       _show('HTTP failed (also traced): $e');
@@ -128,7 +132,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void _anr() {
     clicks.add(1, {'button': 'anr'});
-    _show('Main thread blocked for 20 s: tap the screen, then choose "Close app".');
+    _show(
+      'Main thread blocked for 20 s: tap the screen, then choose "Close app".',
+    );
     unawaited(native.invokeMethod<void>('block'));
   }
 
@@ -142,8 +148,11 @@ class _HomeScreenState extends State<HomeScreen> {
     final buttons = <(String, IconData, VoidCallback)>[
       ('Traced work', Icons.timeline, _tracedWork),
       ('HTTP request', Icons.cloud_download, _httpRequest),
-      ('Open details screen', Icons.open_in_new,
-          () => Navigator.pushNamed(context, '/details')),
+      (
+        'Open details screen',
+        Icons.open_in_new,
+        () => Navigator.pushNamed(context, '/details'),
+      ),
       ('Caught error', Icons.report, _caughtError),
       ('Uncaught error', Icons.bug_report, _uncaughtError),
       ('Jank (800 ms)', Icons.slow_motion_video, _jank),
@@ -158,8 +167,10 @@ class _HomeScreenState extends State<HomeScreen> {
         children: [
           Text(_status, style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(height: 8),
-          Text('session: ${Otel.sessionId}\nscreen: ${Otel.currentScreen}',
-              style: Theme.of(context).textTheme.bodySmall),
+          Text(
+            'session: ${Otel.sessionId}\nscreen: ${Otel.currentScreen}',
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
           const SizedBox(height: 16),
           for (final (label, icon, onTap) in buttons)
             Padding(
@@ -181,9 +192,9 @@ class DetailsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-        appBar: AppBar(title: const Text('Details')),
-        body: const Center(
-          child: Text('Time spent here is a "screen /details" span.'),
-        ),
-      );
+    appBar: AppBar(title: const Text('Details')),
+    body: const Center(
+      child: Text('Time spent here is a "screen /details" span.'),
+    ),
+  );
 }

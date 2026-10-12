@@ -151,15 +151,19 @@ final class OtelConfig {
 /// `--dart-define` values with standard OpenTelemetry names.
 abstract final class OtelEnvironment {
   static const endpoint = String.fromEnvironment('OTEL_EXPORTER_OTLP_ENDPOINT');
-  static const tracesEndpoint =
-      String.fromEnvironment('OTEL_EXPORTER_OTLP_TRACES_ENDPOINT');
-  static const metricsEndpoint =
-      String.fromEnvironment('OTEL_EXPORTER_OTLP_METRICS_ENDPOINT');
-  static const logsEndpoint =
-      String.fromEnvironment('OTEL_EXPORTER_OTLP_LOGS_ENDPOINT');
+  static const tracesEndpoint = String.fromEnvironment(
+    'OTEL_EXPORTER_OTLP_TRACES_ENDPOINT',
+  );
+  static const metricsEndpoint = String.fromEnvironment(
+    'OTEL_EXPORTER_OTLP_METRICS_ENDPOINT',
+  );
+  static const logsEndpoint = String.fromEnvironment(
+    'OTEL_EXPORTER_OTLP_LOGS_ENDPOINT',
+  );
   static const headers = String.fromEnvironment('OTEL_EXPORTER_OTLP_HEADERS');
-  static const resourceAttributes =
-      String.fromEnvironment('OTEL_RESOURCE_ATTRIBUTES');
+  static const resourceAttributes = String.fromEnvironment(
+    'OTEL_RESOURCE_ATTRIBUTES',
+  );
 
   /// Parses `key1=value1,key2=value2` with percent-encoded values.
   static Map<String, String> parseList(String raw) {

@@ -33,13 +33,13 @@ final class OtlpHttpExporter {
     required bool compression,
     required int maxAttempts,
     OfflineStore? store,
-  })  : _endpoints = endpoints,
-        _headers = headers,
-        _client = client,
-        _timeout = timeout,
-        _compression = compression,
-        _maxAttempts = max(1, maxAttempts),
-        _store = store;
+  }) : _endpoints = endpoints,
+       _headers = headers,
+       _client = client,
+       _timeout = timeout,
+       _compression = compression,
+       _maxAttempts = max(1, maxAttempts),
+       _store = store;
 
   final Map<Signal, Uri> _endpoints;
   final Map<String, String> _headers;
@@ -80,8 +80,10 @@ final class OtlpHttpExporter {
 
     if (store != null && (urgent || _circuitOpen)) {
       await store.save(payload);
-      Diagnostics.debug('${signal.name}: $items item(s) queued on disk'
-          '${urgent ? ' (app backgrounded)' : ' (offline)'}');
+      Diagnostics.debug(
+        '${signal.name}: $items item(s) queued on disk'
+        '${urgent ? ' (app backgrounded)' : ' (offline)'}',
+      );
       if (!_circuitOpen) unawaited(drainStore());
       return;
     }
@@ -90,7 +92,9 @@ final class OtlpHttpExporter {
       payload,
       items,
       // With a store a quick second try is enough: disk is the safety net.
-      attempts: store != null ? min(2, _maxAttempts) : (urgent ? 1 : _maxAttempts),
+      attempts: store != null
+          ? min(2, _maxAttempts)
+          : (urgent ? 1 : _maxAttempts),
     );
     switch (outcome) {
       case _Outcome.success:
@@ -174,13 +178,15 @@ final class OtlpHttpExporter {
     int items, {
     required int attempts,
   }) async {
-    for (var attempt = 1;; attempt++) {
+    for (var attempt = 1; ; attempt++) {
       final sw = Stopwatch()..start();
       final (outcome, retryAfter) = await _send(payload);
       if (outcome == _Outcome.success) {
-        Diagnostics.debug('${payload.signal.name}: exported $items item(s), '
-            '${(payload.bytes.length / 1024).toStringAsFixed(1)} KB'
-            '${payload.gzipped ? ' gzip' : ''} in ${sw.elapsedMilliseconds} ms');
+        Diagnostics.debug(
+          '${payload.signal.name}: exported $items item(s), '
+          '${(payload.bytes.length / 1024).toStringAsFixed(1)} KB'
+          '${payload.gzipped ? ' gzip' : ''} in ${sw.elapsedMilliseconds} ms',
+        );
       }
       if (outcome != _Outcome.retryable || attempt >= attempts || _closed) {
         return (outcome, retryAfter);
@@ -212,22 +218,28 @@ final class OtlpHttpExporter {
           )
           .timeout(_timeout);
     } catch (e) {
-      Diagnostics.warnOnce('network-${e.runtimeType}',
-          'Cannot reach $uri ($e). Data is kept and retried. On an Android '
-          'emulator use 10.0.2.2 instead of localhost; on a real device use '
-          "your computer's LAN IP.");
+      Diagnostics.warnOnce(
+        'network-${e.runtimeType}',
+        'Cannot reach $uri ($e). Data is kept and retried. On an Android '
+            'emulator use 10.0.2.2 instead of localhost; on a real device use '
+            "your computer's LAN IP.",
+      );
       return (_Outcome.retryable, null);
     }
 
     final code = response.statusCode;
     if (code >= 200 && code < 300) return (_Outcome.success, null);
     if (_retryableStatus.contains(code)) {
-      return (_Outcome.retryable, _parseRetryAfter(response.headers['retry-after']));
+      return (
+        _Outcome.retryable,
+        _parseRetryAfter(response.headers['retry-after']),
+      );
     }
     final hint = switch (code) {
       401 || 403 => 'check the auth headers (OtelConfig.headers)',
-      404 => 'wrong URL: OTLP/HTTP expects <base>/v1/${payload.signal.name} '
-          'on port 4318 (4317 is gRPC)',
+      404 =>
+        'wrong URL: OTLP/HTTP expects <base>/v1/${payload.signal.name} '
+            'on port 4318 (4317 is gRPC)',
       413 => 'request too large; lower OtelConfig.maxExportBatchSize',
       415 => 'the endpoint does not accept OTLP protobuf',
       _ => 'permanent error',
@@ -238,8 +250,10 @@ final class OtlpHttpExporter {
     final readable = type.contains('text') || type.contains('json');
     final body = readable ? response.body : '';
     final snippet = body.length > 200 ? '${body.substring(0, 200)}...' : body;
-    Diagnostics.warnOnce('http-$code-${payload.signal.name}',
-        'Export to $uri failed with HTTP $code: $hint. $snippet');
+    Diagnostics.warnOnce(
+      'http-$code-${payload.signal.name}',
+      'Export to $uri failed with HTTP $code: $hint. $snippet',
+    );
     return (_Outcome.fatal, null);
   }
 
@@ -261,8 +275,18 @@ final class OtlpHttpExporter {
 @internal
 abstract final class HttpDateParser {
   static const _months = {
-    'Jan': 1, 'Feb': 2, 'Mar': 3, 'Apr': 4, 'May': 5, 'Jun': 6,
-    'Jul': 7, 'Aug': 8, 'Sep': 9, 'Oct': 10, 'Nov': 11, 'Dec': 12,
+    'Jan': 1,
+    'Feb': 2,
+    'Mar': 3,
+    'Apr': 4,
+    'May': 5,
+    'Jun': 6,
+    'Jul': 7,
+    'Aug': 8,
+    'Sep': 9,
+    'Oct': 10,
+    'Nov': 11,
+    'Dec': 12,
   };
 
   /// e.g. `Wed, 21 Oct 2015 07:28:00 GMT`.

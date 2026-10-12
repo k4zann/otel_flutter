@@ -26,13 +26,21 @@ import '../sdk.dart';
 @internal
 final class FrameMonitor {
   final Meter _meter = Meter.of('otel_flutter.frames');
-  late final Counter _frames = _meter.counter('app.frames',
-      unit: '{frame}', description: 'Rendered frames.');
-  late final Counter _slow = _meter.counter('app.frames.slow',
-      unit: '{frame}',
-      description: 'Frames whose build or raster time exceeded the budget.');
-  late final Counter _frozen = _meter.counter('app.frames.frozen',
-      unit: '{frame}', description: 'Frames that took 700 ms or longer.');
+  late final Counter _frames = _meter.counter(
+    'app.frames',
+    unit: '{frame}',
+    description: 'Rendered frames.',
+  );
+  late final Counter _slow = _meter.counter(
+    'app.frames.slow',
+    unit: '{frame}',
+    description: 'Frames whose build or raster time exceeded the budget.',
+  );
+  late final Counter _frozen = _meter.counter(
+    'app.frames.frozen',
+    unit: '{frame}',
+    description: 'Frames that took 700 ms or longer.',
+  );
   late final Histogram _duration = _meter.histogram(
     'app.frame.duration',
     unit: 'ms',
@@ -107,7 +115,7 @@ final class FrameMonitor {
 @internal
 final class StallDetector with WidgetsBindingObserver {
   StallDetector({int Function()? nowMicros})
-      : _now = nowMicros ?? _stopwatchMicros;
+    : _now = nowMicros ?? _stopwatchMicros;
 
   static final Stopwatch _stopwatch = Stopwatch()..start();
   static int _stopwatchMicros() => _stopwatch.elapsedMicroseconds;

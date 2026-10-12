@@ -22,14 +22,14 @@ void main() {
   });
 
   OtelConfig config({bool lifecycle = true}) => OtelConfig(
-        serviceName: 'test-app',
-        serviceVersion: '9.9.9',
-        endpoint: 'http://collector:4318',
-        httpClient: client,
-        compression: false,
-        captureAppStart: false,
-        captureLifecycle: lifecycle,
-      );
+    serviceName: 'test-app',
+    serviceVersion: '9.9.9',
+    endpoint: 'http://collector:4318',
+    httpClient: client,
+    compression: false,
+    captureAppStart: false,
+    captureLifecycle: lifecycle,
+  );
 
   /// Runs [body] with Otel initialized and always shuts it down inside the
   /// test, so no timers or handlers leak into the next test.
@@ -55,13 +55,15 @@ void main() {
       .expand((r) => Msg.parse(r.bodyBytes).messages(1));
 
   List<Msg> items(String path) => [
-        for (final rs in resourceItems(path))
-          for (final scope in rs.messages(2)) ...scope.messages(2),
-      ];
+    for (final rs in resourceItems(path))
+      for (final scope in rs.messages(2)) ...scope.messages(2),
+  ];
 
   List<Msg> spans() => items('/v1/traces');
   List<Msg> logs() => items('/v1/logs');
-  Map<String, Msg> metrics() => {for (final m in items('/v1/metrics')) m.string(1): m};
+  Map<String, Msg> metrics() => {
+    for (final m in items('/v1/metrics')) m.string(1): m,
+  };
   Msg spanNamed(String name) => spans().lastWhere((s) => s.string(5) == name);
   Iterable<Msg> eventsNamed(String name) =>
       logs().where((l) => l.has(12) && l.string(12) == name);
@@ -70,9 +72,9 @@ void main() {
 
   otelTest('spans, logs and metrics reach the collector', (tester) async {
     final span = Otel.tracer('checkout').startSpan('pay');
-    OtelContext.current.withSpan(span).run(
-          () => Otel.logger('checkout').info('paid', attributes: {'n': 1}),
-        );
+    OtelContext.current
+        .withSpan(span)
+        .run(() => Otel.logger('checkout').info('paid', attributes: {'n': 1}));
     span.end();
     Otel.meter('checkout').counter('orders').add(2);
     await Otel.flush();
@@ -86,7 +88,9 @@ void main() {
     final pay = spanNamed('pay');
     expect(pay.attributes(9)['session.id'], Otel.sessionId);
 
-    final paid = logs().singleWhere((l) => l.has(5) && Msg.anyValue(l.message(5)) == 'paid');
+    final paid = logs().singleWhere(
+      (l) => l.has(5) && Msg.anyValue(l.message(5)) == 'paid',
+    );
     expect(paid.bytes(9), pay.bytes(1), reason: 'log linked to trace');
     expect(paid.attributes(6)['n'], 1);
 
@@ -94,8 +98,9 @@ void main() {
     expect(eventsNamed('session.start'), isNotEmpty);
   });
 
-  otelTest('errors are reported and previous handlers still run',
-      (tester) async {
+  otelTest('errors are reported and previous handlers still run', (
+    tester,
+  ) async {
     await Otel.shutdown();
     var previousPlatformCalls = 0;
     final originalPlatform = PlatformDispatcher.instance.onError;
@@ -105,28 +110,45 @@ void main() {
     };
     await Otel.init(config());
 
-    FlutterError.reportError(FlutterErrorDetails(
-      exception: StateError('build failed'),
-      stack: StackTrace.current,
-      library: 'widgets library',
-    ));
-    expect(tester.takeException(), isStateError,
-        reason: 'the test framework handler (previous) still ran');
+    FlutterError.reportError(
+      FlutterErrorDetails(
+        exception: StateError('build failed'),
+        stack: StackTrace.current,
+        library: 'widgets library',
+      ),
+    );
+    expect(
+      tester.takeException(),
+      isStateError,
+      reason: 'the test framework handler (previous) still ran',
+    );
 
-    final handled =
-        PlatformDispatcher.instance.onError!(ArgumentError('async boom'), StackTrace.current);
+    final handled = PlatformDispatcher.instance.onError!(
+      ArgumentError('async boom'),
+      StackTrace.current,
+    );
     expect(handled, isTrue, reason: 'previous handler result is kept');
     expect(previousPlatformCalls, 1);
 
     Otel.recordError(const FormatException('manual'), null);
     await Otel.flush();
 
-    final errorLogs = logs().where((l) => l.attributes(6).containsKey('exception.type'));
-    final bySource = {for (final l in errorLogs) l.attributes(6)['app.error.source']: l};
-    expect(bySource.keys, containsAll(['flutter_framework', 'uncaught', 'manual']));
+    final errorLogs = logs().where(
+      (l) => l.attributes(6).containsKey('exception.type'),
+    );
+    final bySource = {
+      for (final l in errorLogs) l.attributes(6)['app.error.source']: l,
+    };
+    expect(
+      bySource.keys,
+      containsAll(['flutter_framework', 'uncaught', 'manual']),
+    );
     expect(bySource['flutter_framework']!.varint(2), 17, reason: 'ERROR');
     expect(bySource['uncaught']!.varint(2), 21, reason: 'FATAL');
-    expect(bySource['flutter_framework']!.attributes(6)['exception.stacktrace'], isNotEmpty);
+    expect(
+      bySource['flutter_framework']!.attributes(6)['exception.stacktrace'],
+      isNotEmpty,
+    );
     expect(sumOf(metrics()['app.errors']!), 3);
 
     await Otel.shutdown();
@@ -135,15 +157,18 @@ void main() {
     await Otel.init(config());
   });
 
-  otelTest('navigation creates screen spans and tags telemetry',
-      (tester) async {
-    await tester.pumpWidget(MaterialApp(
-      navigatorObservers: [OtelNavigatorObserver()],
-      routes: {
-        '/': (_) => const Text('home'),
-        '/details': (_) => const Text('details'),
-      },
-    ));
+  otelTest('navigation creates screen spans and tags telemetry', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        navigatorObservers: [OtelNavigatorObserver()],
+        routes: {
+          '/': (_) => const Text('home'),
+          '/details': (_) => const Text('details'),
+        },
+      ),
+    );
     final nav = tester.state<NavigatorState>(find.byType(Navigator));
     nav.pushNamed('/details');
     await tester.pumpAndSettle();
@@ -167,15 +192,21 @@ void main() {
     final details = spanNamed('screen /details');
     expect(details.attributes(9)['app.screen.name'], '/details');
     expect(details.fixed64(8), greaterThan(details.fixed64(7)));
-    expect(spanNamed('on-details').attributes(9)['app.screen.name'], '/details');
+    expect(
+      spanNamed('on-details').attributes(9)['app.screen.name'],
+      '/details',
+    );
   });
 
-  otelTest('background flushes immediately and long absence rotates session',
-      (tester) async {
-    await tester.pumpWidget(MaterialApp(
-      navigatorObservers: [OtelNavigatorObserver()],
-      routes: {'/': (_) => const Text('home')},
-    ));
+  otelTest('background flushes immediately and long absence rotates session', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        navigatorObservers: [OtelNavigatorObserver()],
+        routes: {'/': (_) => const Text('home')},
+      ),
+    );
     Otel.tracer('t').startSpan('before-pause').end();
     expect(spans(), isEmpty, reason: 'still waiting for the batch delay');
 
@@ -259,8 +290,9 @@ void main() {
     expect(jank['app.jank.period'], closeTo(0.8, 0.001));
   });
 
-  otelTest('OtelHttpClient traces requests and propagates context',
-      (tester) async {
+  otelTest('OtelHttpClient traces requests and propagates context', (
+    tester,
+  ) async {
     final seenHeaders = <Map<String, String>>[];
     final api = OtelHttpClient(
       inner: MockClient((r) async {
@@ -269,10 +301,14 @@ void main() {
         return http.Response('{}', r.url.path == '/missing' ? 404 : 200);
       }),
     );
-    await api.get(Uri.parse('https://user:pw@api.example.com/items?token=secret#x'));
+    await api.get(
+      Uri.parse('https://user:pw@api.example.com/items?token=secret#x'),
+    );
     await api.get(Uri.parse('https://api.example.com/missing'));
-    await expectLater(api.get(Uri.parse('https://api.example.com/fail')),
-        throwsA(isA<http.ClientException>()));
+    await expectLater(
+      api.get(Uri.parse('https://api.example.com/fail')),
+      throwsA(isA<http.ClientException>()),
+    );
     await Otel.flush();
 
     final http0 = spans().where((s) => s.string(5) == 'GET').toList();
@@ -295,29 +331,38 @@ void main() {
     expect(duration.string(3), 's');
   });
 
-  otelTest('global attributes and user id are added everywhere',
-      (tester) async {
+  otelTest('global attributes and user id are added everywhere', (
+    tester,
+  ) async {
     Otel.setUser('u-42');
     Otel.setGlobalAttribute('tenant', 'acme');
     Otel.tracer('t').startSpan('s').end();
     Otel.logger('t').info('l');
-    Otel.logger('t')
-        .info('earlier run', attributes: {'session.id': null, 'tenant': null});
+    Otel.logger(
+      't',
+    ).info('earlier run', attributes: {'session.id': null, 'tenant': null});
     Otel.setUser(null);
     Otel.tracer('t').startSpan('after-logout').end();
     await Otel.flush();
-    expect(spanNamed('s').attributes(9),
-        containsPair('user.id', 'u-42'));
+    expect(spanNamed('s').attributes(9), containsPair('user.id', 'u-42'));
     expect(spanNamed('s').attributes(9), containsPair('tenant', 'acme'));
-    expect(spanNamed('after-logout').attributes(9).containsKey('user.id'),
-        isFalse);
-    Msg log(String body) =>
-        logs().singleWhere((l) => l.has(5) && Msg.anyValue(l.message(5)) == body);
+    expect(
+      spanNamed('after-logout').attributes(9).containsKey('user.id'),
+      isFalse,
+    );
+    Msg log(String body) => logs().singleWhere(
+      (l) => l.has(5) && Msg.anyValue(l.message(5)) == body,
+    );
     expect(log('l').attributes(6), containsPair('user.id', 'u-42'));
-    expect(log('earlier run').attributes(6).keys,
-        allOf(contains('user.id'), isNot(contains('session.id')),
-            isNot(contains('tenant'))),
-        reason: 'an explicit null removes a common attribute');
+    expect(
+      log('earlier run').attributes(6).keys,
+      allOf(
+        contains('user.id'),
+        isNot(contains('session.id')),
+        isNot(contains('tenant')),
+      ),
+      reason: 'an explicit null removes a common attribute',
+    );
   });
 
   testWidgets('everything is a safe no-op before init', (tester) async {

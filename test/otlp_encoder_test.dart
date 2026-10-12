@@ -41,8 +41,9 @@ void main() {
   test('spans: every OTLP field is encoded', () {
     final tracer = Tracer.of('checkout', '2.0');
     final remote = W3CPropagator.parseTraceparent(
-        '00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01',
-        'vendor=abc')!;
+      '00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01',
+      'vendor=abc',
+    )!;
     final linked = Tracer.of('other').startSpan('linked');
     final span = tracer.startSpan(
       'pay',
@@ -67,8 +68,10 @@ void main() {
 
     final req = Msg.parse(OtlpEncoder.encodeSpans(resource, pipeline.ended));
     final rs = req.messages(1).single;
-    expect(rs.message(1).attributes(1),
-        {'service.name': 'shop', 'service.version': '1.2.3'});
+    expect(rs.message(1).attributes(1), {
+      'service.name': 'shop',
+      'service.version': '1.2.3',
+    });
     final ss = rs.messages(2).single;
     expect(ss.message(1).string(1), 'checkout');
     expect(ss.message(1).string(2), '2.0');
@@ -107,9 +110,9 @@ void main() {
     Tracer.of('a').startSpan('1').end();
     Tracer.of('b').startSpan('2').end();
     Tracer.of('a').startSpan('3').end();
-    final rs = Msg.parse(OtlpEncoder.encodeSpans(resource, pipeline.ended))
-        .messages(1)
-        .single;
+    final rs = Msg.parse(
+      OtlpEncoder.encodeSpans(resource, pipeline.ended),
+    ).messages(1).single;
     final scopes = rs.messages(2);
     expect(scopes.map((s) => s.message(1).string(1)), ['a', 'b']);
     expect(scopes.first.messages(2).map((s) => s.string(5)), ['1', '3']);
@@ -122,12 +125,13 @@ void main() {
     meter.counter('orders').add(3, {'method': 'card'});
     meter.upDownCounter('items').add(-1.5);
     meter.gauge('temp').record(21);
-    meter
-        .histogram('latency', unit: 'ms', boundaries: [10, 100])
-        .record(50, {'route': '/a'});
+    meter.histogram('latency', unit: 'ms', boundaries: [10, 100]).record(50, {
+      'route': '/a',
+    });
 
     final req = Msg.parse(
-        OtlpEncoder.encodeMetrics(resource, MeterRegistry.collect()));
+      OtlpEncoder.encodeMetrics(resource, MeterRegistry.collect()),
+    );
     final metrics = req.messages(1).single.messages(2).single.messages(2);
     final byName = {for (final m in metrics) m.string(1): m};
 
@@ -170,8 +174,7 @@ void main() {
       );
     });
     span.end();
-    final req =
-        Msg.parse(OtlpEncoder.encodeLogs(resource, pipeline.logs));
+    final req = Msg.parse(OtlpEncoder.encodeLogs(resource, pipeline.logs));
     final log = req.messages(1).single.messages(2).single.messages(2).single;
     expect(log.varint(2), 13);
     expect(log.string(3), 'WARN');
@@ -186,19 +189,16 @@ void main() {
 
   test('dropped counts are reported', () {
     Pipeline.current = FakePipeline(
-        limits: const TelemetryLimits(maxAttributes: 1, maxEvents: 1));
+      limits: const TelemetryLimits(maxAttributes: 1, maxEvents: 1),
+    );
     final span = Tracer.of('x').startSpan('y', attributes: {'a': 1, 'b': 2})
       ..addEvent('e1')
       ..addEvent('e2')
       ..end();
     final rec = span as RecordingSpan;
-    final s = Msg.parse(OtlpEncoder.encodeSpans(resource, [rec]))
-        .messages(1)
-        .single
-        .messages(2)
-        .single
-        .messages(2)
-        .single;
+    final s = Msg.parse(
+      OtlpEncoder.encodeSpans(resource, [rec]),
+    ).messages(1).single.messages(2).single.messages(2).single;
     expect(s.varint(10), 1);
     expect(s.varint(12), 1);
   });
@@ -208,12 +208,9 @@ void main() {
       Tracer.of('bulk').startSpan('span $i', attributes: {'i': i}).end();
     }
     final bytes = OtlpEncoder.encodeSpans(resource, pipeline.ended);
-    final spans = Msg.parse(bytes)
-        .messages(1)
-        .single
-        .messages(2)
-        .single
-        .messages(2);
+    final spans = Msg.parse(
+      bytes,
+    ).messages(1).single.messages(2).single.messages(2);
     expect(spans, hasLength(2000));
     expect(spans.last.attributes(9), {'i': 1999});
   });
@@ -232,7 +229,12 @@ void main() {
   });
 
   test('scope cache returns identical objects', () {
-    expect(identical(InstrumentationScope.of('a', '1'),
-        InstrumentationScope.of('a', '1')), isTrue);
+    expect(
+      identical(
+        InstrumentationScope.of('a', '1'),
+        InstrumentationScope.of('a', '1'),
+      ),
+      isTrue,
+    );
   });
 }

@@ -114,8 +114,9 @@ void main() {
     }
     final points = only('c').points;
     expect(points, hasLength(5));
-    final overflow =
-        points.singleWhere((p) => p.attributes['otel.metric.overflow'] == true);
+    final overflow = points.singleWhere(
+      (p) => p.attributes['otel.metric.overflow'] == true,
+    );
     expect(overflow.value, 16);
   });
 
@@ -128,4 +129,3 @@ void main() {
     expect(only('c').points.single.value, 2);
   });
 }
-
