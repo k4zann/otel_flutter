@@ -1,0 +1,38 @@
+schema: spec-driven
+
+# Project context. AGENTS.md (repo root) is the single source of truth;
+# this only points to it plus the constraints every artifact must respect.
+context: |
+  Project: otel_flutter, a lean OpenTelemetry SDK for Flutter (traces,
+  metrics, logs over OTLP/HTTP protobuf). Canonical overview, commands,
+  layout, invariants and gotchas: AGENTS.md at the repo root; read it
+  before writing any artifact. Behavior contracts: openspec/specs/*.
+  Flutter is not on PATH: ~/fvm/versions/3.44.2/bin/flutter.
+  Hard constraints: never throw into app code; no idle timers or requests;
+  dependencies limited to http and meta; dart:io only in
+  lib/src/platform/*_io.dart; web-safe arithmetic (< 2^53) in the encoder;
+  chain global error handlers; never record route arguments, query strings
+  or credentials.
+
+rules:
+  proposal:
+    - State the impact on battery, network, privacy and app size whenever the change touches runtime behavior.
+    - A new dependency or platform plugin code must be called out under Impact and justified in design.md.
+    - Use skip_specs only for tooling, docs or verification work that changes no library behavior.
+  specs:
+    - Keep the flat capability layout (openspec/specs/<capability>/spec.md); extend an existing capability before inventing a new one.
+    - Describe observable behavior (signals, attribute names, defaults, limits), not internal class names.
+  design:
+    - List alternatives considered and why they were rejected.
+  tasks:
+    - Every task states how to verify it (test name, command, or observable result).
+    - End with a verification group running `~/fvm/versions/3.44.2/bin/flutter analyze` and `flutter test`, plus test/e2e against a real collector when export or encoding code changed.
+    - Include a task to update AGENTS.md (layout, commands, backlog) and the README when they are affected.
+
+operations:
+  apply:
+    guidance:
+      - Re-read AGENTS.md invariants before editing code; stop and ask if a task would violate one.
+  archive:
+    guidance:
+      - Remove the change from the AGENTS.md backlog table when archiving.

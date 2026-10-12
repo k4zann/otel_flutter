@@ -1,0 +1,47 @@
+# Minimal OpenTelemetry Collector config: no Docker needed.
+#
+# 1. Download `otelcol` for your OS from
+#    https://github.com/open-telemetry/opentelemetry-collector-releases/releases
+# 2. ./otelcol --config backend/otel-collector.yaml
+#
+# It prints everything the app sends to the terminal. To forward to a real
+# backend (Grafana Cloud, Honeycomb, SigNoz, ...), add an `otlphttp` exporter
+# with that vendor's endpoint and API key HERE, on your server, instead of
+# shipping the key inside the app.
+receivers:
+  otlp:
+    protocols:
+      http:
+        # 0.0.0.0 so emulators and phones on your Wi-Fi can reach it.
+        endpoint: 0.0.0.0:4318
+        # Needed only for Flutter web apps (browser CORS).
+        cors:
+          allowed_origins: ["http://localhost:*", "http://127.0.0.1:*"]
+
+processors:
+  batch: {}
+
+exporters:
+  debug:
+    verbosity: detailed
+
+  # Example: forward to a vendor (uncomment and add to the pipelines).
+  # otlphttp/vendor:
+  #   endpoint: https://otlp-gateway-prod-eu-west-2.grafana.net/otlp
+  #   headers:
+  #     Authorization: "Basic ${env:GRAFANA_OTLP_TOKEN}"
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [debug]
+    metrics:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [debug]
+    logs:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [debug]

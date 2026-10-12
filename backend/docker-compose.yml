@@ -1,0 +1,32 @@
+# Free, open-source observability backend for local development.
+#
+#   docker compose up -d
+#
+# Grafana UI:   http://localhost:3000   (traces: Tempo, logs: Loki, metrics: Prometheus)
+# OTLP/HTTP:    http://localhost:4318   <- point the app here
+#
+# Android emulator: use http://10.0.2.2:4318
+# Real phone:       use http://<your-computer-LAN-IP>:4318 (same Wi-Fi)
+services:
+  lgtm:
+    image: grafana/otel-lgtm:0.36.0
+    ports:
+      - "3000:3000" # Grafana
+      - "4317:4317" # OTLP gRPC (not used by otel_flutter)
+      - "4318:4318" # OTLP HTTP
+    volumes:
+      - lgtm-data:/data
+    restart: unless-stopped
+
+  # Optional: Jaeger UI for traces only (http://localhost:16686).
+  # Start with: docker compose --profile jaeger up -d
+  # Then send traces to http://localhost:14318 (tracesEndpoint).
+  jaeger:
+    profiles: ["jaeger"]
+    image: jaegertracing/jaeger:2.22.0
+    ports:
+      - "16686:16686"
+      - "14318:4318"
+
+volumes:
+  lgtm-data:
