@@ -15,7 +15,9 @@ on pub.dev.
 - Replace `LICENSE`, add a README section, and set publishing metadata to
   match.
 
-Decision: _pending. Fill in before applying._
+Decision (owner, 2026-10-12): **Apache-2.0**, copyright holder
+**The otel_flutter Authors**. The same license applies to the
+`otel_flutter_native` plugin in `packages/`.
 
 ## Capabilities
 
@@ -29,6 +31,10 @@ None. Licensing only (`skip_specs: true`).
 
 - `LICENSE`, `README.md`, `pubspec.yaml` (`publish_to`, `repository`,
   `homepage`), `example/` (inherits).
+- `packages/otel_flutter_native/`: `LICENSE`, `README.md`, `pubspec.yaml`
+  (`repository`, `homepage`). It keeps `publish_to: none` because its path
+  dependency on `otel_flutter` blocks publishing until the core package is
+  on pub.dev.
 - No code or behavior changes. No third-party attribution is needed: the code
   was written from scratch; opentelemetry-proto field numbers are protocol
   facts.

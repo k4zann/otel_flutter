@@ -7,3 +7,7 @@ launch.
 Add it as a dependency and rebuild; it registers itself. What it reports,
 platform limits and the opt-out flag: see
 [Native crashes, ANRs and exit reasons](../../README.md#native-crashes-anrs-and-exit-reasons-optional-plugin).
+
+## License
+
+Apache License 2.0, same as otel_flutter: see [LICENSE](LICENSE).
