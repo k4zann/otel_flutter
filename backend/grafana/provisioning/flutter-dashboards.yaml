@@ -1,0 +1,14 @@
+# Loads the dashboards in backend/grafana/dashboards into a "Flutter" folder
+# when Grafana starts. Edit the JSON files, not the dashboard in the UI:
+# UI changes to a provisioned dashboard cannot be saved.
+apiVersion: 1
+
+providers:
+  - name: Flutter
+    folder: Flutter
+    type: file
+    disableDeletion: true
+    allowUiUpdates: false
+    options:
+      path: /otel-lgtm/flutter-dashboards
+      foldersFromFilesStructure: false

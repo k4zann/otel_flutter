@@ -109,13 +109,39 @@ that speaks OTLP, usually on **port 4318**. The SDK posts to
 
 ### Free, local (for development)
 
+Needs Docker. On a Mac without Docker Desktop,
+[Colima](https://github.com/abiosoft/colima) is a free runtime:
+
+```bash
+brew install colima docker docker-compose
+colima start --cpu 2 --memory 4
+```
+
+For `docker compose` to work, add
+`"cliPluginsExtraDirs": ["/opt/homebrew/lib/docker/cli-plugins"]` to
+`~/.docker/config.json` (Homebrew prints this too). Then start the backend:
+
 ```bash
 cd backend && docker compose up -d   # Grafana + Tempo + Loki + Prometheus
 ```
 
-Open http://localhost:3000, then **Explore**: Tempo for traces, Loki for
-logs, Prometheus for metrics. No Docker? Run the plain collector (prints
-everything to the terminal):
+Open http://localhost:3000, then **Dashboards > Flutter > Flutter App
+Health**: uncaught errors, native crashes and ANRs, errors and UI stalls per
+minute, slow and frozen frames by screen, app start p50/p95, HTTP latency and
+error rate, and sessions. Pick the app with the **Service** filter. The
+dashboard is
+[backend/grafana/dashboards/flutter-app-health.json](backend/grafana/dashboards/flutter-app-health.json)
+and loads at startup; change the file, not the copy in Grafana.
+
+For everything else use **Explore**: Tempo for traces, Loki for logs (a log
+with a trace id links to its trace), Prometheus for metrics. Event names are
+kept for Loki, so `{service_name="my_app"} | event_name="app.jank"` finds
+events.
+
+`docker compose down` stops the backend; `docker compose down -v` also
+deletes the stored data; `colima stop` stops the VM.
+
+No Docker? Run the plain collector (prints everything to the terminal):
 
 ```bash
 ./otelcol --config backend/otel-collector.yaml
