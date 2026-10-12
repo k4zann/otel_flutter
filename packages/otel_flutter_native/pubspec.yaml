@@ -1,6 +1,10 @@
 name: otel_flutter_native
 description: "Native crash, ANR and exit-reason reporting for otel_flutter (Android ApplicationExitInfo, iOS MetricKit)."
 version: 0.1.0
+repository: https://github.com/k4zann/otel_flutter/tree/main/packages/otel_flutter_native
+homepage: https://github.com/k4zann/otel_flutter
+# Not publishable yet: the path dependency on otel_flutter below must become a
+# hosted version first, once otel_flutter itself is on pub.dev.
 publish_to: none
 
 environment:

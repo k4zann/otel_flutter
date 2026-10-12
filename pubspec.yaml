@@ -1,7 +1,8 @@
 name: otel_flutter
 description: "Lean OpenTelemetry for Flutter: traces, metrics and logs over OTLP/HTTP with offline queue, crash, screen, jank and app-start capture."
 version: 0.1.0
-publish_to: none
+repository: https://github.com/k4zann/otel_flutter
+homepage: https://github.com/k4zann/otel_flutter
 
 environment:
   sdk: ^3.8.0

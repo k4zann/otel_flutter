@@ -277,3 +277,9 @@ format and analyzer checks before each commit with the bundled hook:
 ```bash
 git config core.hooksPath .githooks   # once per clone
 ```
+
+## 8. License
+
+Apache License 2.0: see [LICENSE](LICENSE). Copyright 2026 The otel_flutter
+Authors. The `otel_flutter_native` plugin in `packages/` uses the same
+license.

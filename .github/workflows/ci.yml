@@ -105,9 +105,22 @@ jobs:
   ios:
     name: Swift (plugin unit tests, no warnings)
     runs-on: macos-latest
-    timeout-minutes: 40
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v5
+
+      # A fresh runner's simulator needs minutes for its first boot; that
+      # used to be most of this job. Start it now so it boots while Flutter
+      # is installed and the app is built.
+      - name: Boot a simulator
+        run: |
+          udid=$(xcrun simctl list devices available --json | python3 -c '
+          import json, sys
+          devices = json.load(sys.stdin)["devices"]
+          print(next(d["udid"] for runtime, ds in devices.items() if "iOS" in runtime
+                     for d in ds if d["name"].startswith("iPhone")))')
+          echo "SIMULATOR_UDID=$udid" >> "$GITHUB_ENV"
+          xcrun simctl boot "$udid"
 
       - uses: subosito/flutter-action@v2
         with:
@@ -123,13 +136,12 @@ jobs:
         working-directory: packages/otel_flutter_native/example/ios
         run: |
           set -o pipefail
-          udid=$(xcrun simctl list devices available --json | python3 -c '
-          import json, sys
-          devices = json.load(sys.stdin)["devices"]
-          print(next(d["udid"] for runtime, ds in devices.items() if "iOS" in runtime
-                     for d in ds if d["name"].startswith("iPhone")))')
+          xcrun simctl bootstatus "$SIMULATOR_UDID" -b
+          # The scheme allows parallel testing, which makes xcodebuild clone
+          # the simulator and cold-boot the clone (~6 min). Use the booted one.
           xcodebuild test -workspace Runner.xcworkspace -scheme Runner \
-            -destination "id=$udid" -only-testing:RunnerTests | tee xcodebuild.log
+            -destination "id=$SIMULATOR_UDID" -parallel-testing-enabled NO \
+            -only-testing:RunnerTests | tee xcodebuild.log
           # Only the plugin's own sources and tests: Flutter's generated code
           # is not ours to fix.
           if grep -E '(Sources/otel_flutter_native|RunnerTests)/[^:]*\.swift:[0-9]+:[0-9]+: warning:' xcodebuild.log; then

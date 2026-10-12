@@ -22,8 +22,14 @@ screens, frames, UI stalls, app start, sessions and HTTP calls automatically.
 * Written from scratch from the OpenTelemetry spec and opentelemetry-proto.
   It contains no Dartastic code.
 * Version 0.1.0, created 2026-10-12. Public git repo at
-  https://github.com/k4zann/otel_flutter (branch `main`). Not published to
-  pub.dev (`publish_to: none`); LICENSE still a placeholder.
+  https://github.com/k4zann/otel_flutter (branch `main`).
+* License: Apache-2.0, `Copyright 2026 The otel_flutter Authors` (root
+  `LICENSE`; the plugin has an identical copy). Not on pub.dev yet; the
+  core pubspec has its publishing metadata (`repository`/`homepage`, no
+  `publish_to`) and `pub publish --dry-run` reports no license or metadata
+  errors. The plugin keeps `publish_to: none` until its path
+  dependency on `otel_flutter` can become a hosted version. No third-party
+  code, so no NOTICE file.
 * Verified: 87 unit/widget tests (+4 in `otel_flutter_native`); end-to-end
   against the official OpenTelemetry Collector 0.162.0 (33 field checks
   plus an offline-restart test); example app run on the iOS simulator
@@ -173,6 +179,11 @@ pending data goes to disk first, then is sent.
   `usesCleartextTraffic` (debug manifest) and, on iOS,
   `NSAllowsLocalNetworking`. Release Android needs the INTERNET permission
   (all three are already set in `example/`).
+* CI's Swift job: the Runner scheme marks `RunnerTests` parallelizable, so
+  plain `xcodebuild test` clones the simulator and cold-boots the clone
+  (~6.5 of the job's ~9 min; the tests take 0.01 s). CI passes
+  `-parallel-testing-enabled NO` and boots the simulator in its first step
+  so the boot overlaps the Flutter setup and build. Keep both.
 
 ## Backlog (OpenSpec changes, `openspec list`)
 
@@ -182,7 +193,7 @@ pending data goes to disk first, then is sent.
 | `run-local-grafana-backend` | Container runtime, run `backend/docker-compose.yml`, provision a Flutter health dashboard |
 | `add-native-crash-capture` | Native crashes/ANRs as `app.crash`/`app.anr` on next launch. Done except 4.1 (MetricKit on a real iPhone); Crashlytics coexistence verified |
 | `add-web-compression` | gzip on web via the browser's CompressionStream |
-| `choose-project-license` | Pick and apply a license (owner decision) |
+| `choose-project-license` | Done: Apache-2.0 applied (core + plugin); remove this row at archive |
 | `production-collector-deployment` | Hardened collector config + deploy guide; keep vendor keys out of the app |
 
 Known small gaps (not yet in a change): the offline-retry timer is not paused
