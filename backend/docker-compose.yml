@@ -3,6 +3,7 @@
 #   docker compose up -d
 #
 # Grafana UI:   http://localhost:3000   (traces: Tempo, logs: Loki, metrics: Prometheus)
+# Dashboard:    Dashboards > Flutter > Flutter App Health
 # OTLP/HTTP:    http://localhost:4318   <- point the app here
 #
 # Android emulator: use http://10.0.2.2:4318
@@ -14,8 +15,18 @@ services:
       - "3000:3000" # Grafana
       - "4317:4317" # OTLP gRPC (not used by otel_flutter)
       - "4318:4318" # OTLP HTTP
+    environment:
+      # The SDK sends cumulative counters with a start time. Without this a
+      # series' first value (one error, one app start) is invisible to
+      # rate() and increase(); with it Prometheus adds a 0 at the start time.
+      PROMETHEUS_EXTRA_ARGS: --enable-feature=created-timestamp-zero-ingestion
     volumes:
       - lgtm-data:/data
+      # The image's collector config plus one rule that keeps log event names.
+      - ./lgtm/otelcol-config.yaml:/otel-lgtm/otelcol-config.yaml:ro
+      # Flutter App Health dashboard, loaded at startup.
+      - ./grafana/dashboards:/otel-lgtm/flutter-dashboards:ro
+      - ./grafana/provisioning/flutter-dashboards.yaml:/otel-lgtm/grafana/conf/provisioning/dashboards/flutter-dashboards.yaml:ro
     restart: unless-stopped
 
   # Optional: Jaeger UI for traces only (http://localhost:16686).

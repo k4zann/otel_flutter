@@ -35,7 +35,9 @@ screens, frames, UI stalls, app start, sessions and HTTP calls automatically.
   plus an offline-restart test); example app run on the iOS simulator
   (iPhone 16e, iOS 26.1); `flutter build web` compiles. Native crash and
   ANR reports verified end-to-end on the Android API 36.1 emulator
-  (profile build). **Not yet verified on a real device or in a browser;
+  (profile build). Local Grafana stack verified end to end with the
+  example on the iOS simulator (traces, logs with trace links, metrics,
+  dashboard). **Not yet verified on a real device or in a browser;
   the core SDK has had no full Android pass yet.**
 
 ## Commands
@@ -53,10 +55,20 @@ openspec list                     # open changes (the backlog)
 openspec validate --all --strict  # must pass after editing specs/changes
 ```
 
-Local collector without Docker: download `otelcol` for darwin_arm64 from
+Local backend: Docker runs through Colima (Homebrew `colima`, `docker`,
+`docker-compose`; the compose plugin is enabled via `cliPluginsExtraDirs` in
+`~/.docker/config.json`). Start the VM with `colima start` if `docker ps`
+fails, then `cd backend && docker compose up -d` (Grafana LGTM, ready when
+`docker logs backend-lgtm-1` prints "LGTM stack are up"). Grafana is
+http://localhost:3000 (anonymous admin), dashboard **Flutter > Flutter App
+Health** from `backend/grafana/dashboards/flutter-app-health.json`;
+`docker compose down -v` wipes all data. Query the backends without the UI
+through `localhost:3000/api/datasources/proxy/uid/{prometheus,loki,tempo}/...`.
+
+Without Docker: download `otelcol` for darwin_arm64 from
 github.com/open-telemetry/opentelemetry-collector-releases (verify the
 `.sha256`), run `./otelcol --config backend/otel-collector.yaml`. To inspect
-decoded data, add a `file` exporter. Docker is not installed on this Mac.
+decoded data, add a `file` exporter.
 
 ## Layout
 
@@ -82,7 +94,9 @@ example/                     demo app (buttons for every feature, incl. native c
 packages/otel_flutter_native/  optional plugin: native crashes, ANRs, exit reasons on next launch
                              (Kotlin ApplicationExitInfo + JVM handler, Swift MetricKit; Dart
                              side registers via dartPluginClass + Otel.registerNativeCrashReporter)
-backend/                     docker-compose (Grafana LGTM, optional Jaeger) + plain collector config
+backend/                     docker-compose (Grafana LGTM, optional Jaeger) + plain collector config;
+                             grafana/ (Flutter App Health dashboard + provisioning), lgtm/ (the
+                             image's collector config + an event-name rule, mounted over it)
 openspec/specs/              behavior specs: tracing, metrics, logs, otlp-export, offline-delivery,
                              error-reporting, app-lifecycle, screen-tracking, ui-performance,
                              http-client, configuration
@@ -196,13 +210,28 @@ pending data goes to disk first, then is sent.
   simulator only after `build-for-testing`: booting it at the start of the
   job, alongside the Flutter setup, made that setup take 172 to 288 s
   instead of 33 to 96 s and tripled the build (runners have 3 CPUs).
+* Loki (3.7.8) drops the OTLP log event name. `backend/lgtm/otelcol-config.yaml`
+  copies it into `event.name`, which Loki keeps as structured metadata
+  `event_name`: filter with `| event_name="session.start"`; it is not a stream
+  label, so `/label/event_name/values` is empty. Refresh that file from the
+  image (`/otel-lgtm/otelcol-config.yaml`) when bumping the image tag.
+* The SDK's cumulative series already hold their first value in the first
+  export, so `rate()`/`increase()` miss a single error or app start unless
+  Prometheus adds a 0 at the start time (`created-timestamp-zero-ingestion`,
+  set in `docker-compose.yml`). Exact counts over a range:
+  `sum(max_over_time(x[$__range]) - min_over_time(x[$__range]))` (every
+  launch is a new series that never resets).
+* Driving the example with simulator taps: Flutter ignores taps during a
+  route transition and while the UI thread is blocked (the Jank button
+  blocks 800 ms), so pace taps and check `example_button_clicks_total`. Two
+  sessions on one simulator replace each other's app: use separate devices.
 
 ## Backlog (OpenSpec changes, `openspec list`)
 
 | Change | Goal |
 |---|---|
 | `verify-android-and-real-devices` | Run on Android emulator + real iPhone/Android; record results; fix what breaks |
-| `run-local-grafana-backend` | Container runtime, run `backend/docker-compose.yml`, provision a Flutter health dashboard |
+| `run-local-grafana-backend` | Done: Colima + LGTM stack, Flutter App Health dashboard provisioned; remove this row at archive |
 | `add-native-crash-capture` | Native crashes/ANRs as `app.crash`/`app.anr` on next launch. Done except 4.1 (MetricKit on a real iPhone); Crashlytics coexistence verified |
 | `add-web-compression` | gzip on web via the browser's CompressionStream |
 | `production-collector-deployment` | Hardened collector config + deploy guide; keep vendor keys out of the app |
