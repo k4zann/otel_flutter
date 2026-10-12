@@ -200,7 +200,6 @@ pending data goes to disk first, then is sent.
 | `run-local-grafana-backend` | Container runtime, run `backend/docker-compose.yml`, provision a Flutter health dashboard |
 | `add-native-crash-capture` | Native crashes/ANRs as `app.crash`/`app.anr` on next launch. Done except 4.1 (MetricKit on a real iPhone); Crashlytics coexistence verified |
 | `add-web-compression` | gzip on web via the browser's CompressionStream |
-| `choose-project-license` | Done: Apache-2.0 applied (core + plugin); remove this row at archive |
 | `production-collector-deployment` | Hardened collector config + deploy guide; keep vendor keys out of the app |
 
 Known small gaps (not yet in a change): the offline-retry timer is not paused
