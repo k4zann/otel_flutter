@@ -45,7 +45,7 @@ screens, frames, UI stalls, app start, sessions and HTTP calls automatically.
 Flutter is **not on PATH**; use fvm's binary:
 
 ```bash
-FLUTTER=~/fvm/versions/3.44.2/bin/flutter   # Flutter 3.44.2 / Dart 3.12.2
+FLUTTER=~/fvm/versions/3.47.7/bin/flutter   # Flutter 3.47.7 / Dart 3.13.5
 $FLUTTER analyze                            # must report "No issues found!"
 $FLUTTER test                               # 87 pass, 2 skipped (e2e)
 (cd packages/otel_flutter_native && $FLUTTER test)  # plugin: 4 pass
@@ -158,7 +158,7 @@ pending data goes to disk first, then is sent.
   Update the matching spec in the same change.
 * Before finishing any task: `$DART format .` (no changes), `$FLUTTER analyze`
   clean (infos count) and `$FLUTTER test` green. Run e2e if export code
-  changed. `DART=~/fvm/versions/3.44.2/bin/dart`; the version is pinned in
+  changed. `DART=~/fvm/versions/3.47.7/bin/dart`; the version is pinned in
   `.fvmrc`.
 * CI (`.github/workflows/ci.yml`, every PR and push to `main`) enforces it:
   format, analyze with infos/warnings fatal, all Dart tests including e2e

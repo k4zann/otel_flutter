@@ -1,6 +1,6 @@
 ## 1. Setup
 
-- [ ] 1.1 Confirm the Android toolchain and an emulator image (API 34+) are installed; verify `~/fvm/versions/3.44.2/bin/flutter devices` lists the emulator
+- [ ] 1.1 Confirm the Android toolchain and an emulator image (API 34+) are installed; verify `~/fvm/versions/3.47.7/bin/flutter devices` lists the emulator
 - [ ] 1.2 Start a collector reachable from devices (`otelcol --config backend/otel-collector.yaml`, listens on 0.0.0.0:4318, plus a `file` exporter for checking); verify `curl -s -o /dev/null -w '%{http_code}' -X POST http://<LAN-IP>:4318/v1/traces` returns 400 or 415 (reachable)
 - [ ] 1.3 Create `docs/DEVICE_TEST_REPORT.md` with a matrix (device, OS, build mode, scenario, result, notes); verify the file exists with one row per scenario in groups 2 to 6
 
