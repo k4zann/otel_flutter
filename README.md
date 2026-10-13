@@ -247,6 +247,68 @@ No dependency needed: `GoRouter(observers: [OtelNavigatorObserver()])`. Give
 routes a `name:` (or pass `screenName: (route) => ...`) so screens get
 readable names.
 
+### Tabs and other screens without a route
+
+Tab bars that keep their pages alive in an `IndexedStack`, page views and
+custom navigation change the screen without a route push, so the observer
+never sees it. Report those screens yourself:
+
+```dart
+Otel.setScreen('ProfileTab');
+```
+
+This has the same effect as a route push: a `screen ProfileTab` span, and
+`app.screen.name` on later telemetry and on crash reports. The observer and
+`setScreen` share one current screen, so the last report wins. Use fixed
+names, never ids or user data: `app.screen.name` is also a metric attribute.
+
+**auto_route tabs** (`AutoTabsScaffold`, `AutoTabsRouter`): auto_route reports
+tab changes only to an `AutoRouterObserver`, so report them from there. Also
+map the tab host to its active tab, so that popping back to the host reports
+the tab:
+
+```dart
+class TabScreenObserver extends AutoRouterObserver {
+  // Static: auto_route creates the observers once per navigator.
+  static String? activeTab;
+
+  @override
+  void didInitTabRoute(TabPageRoute route, TabPageRoute? previousRoute) =>
+      _report(route);
+
+  @override
+  void didChangeTabRoute(TabPageRoute route, TabPageRoute previousRoute) =>
+      _report(route);
+
+  void _report(TabPageRoute route) {
+    activeTab = route.name;
+    Otel.setScreen(route.name);
+  }
+}
+
+MaterialApp.router(
+  routerConfig: appRouter.config(
+    navigatorObservers: () => [
+      TabScreenObserver(),
+      OtelNavigatorObserver(
+        // Back on the tab host: the screen is the tab it shows.
+        screenName: (route) => route.settings.name == HomeRoute.name
+            ? TabScreenObserver.activeTab ?? HomeRoute.name
+            : route.settings.name,
+        // Routes that only wrap other routes are not screens.
+        routeFilter: (route) =>
+            route is PageRoute &&
+            route.settings.name != SessionWrapperRoute.name,
+      ),
+    ],
+  ),
+);
+```
+
+At startup the host route is pushed before its first tab is known, so a
+near-zero `screen HomeRoute` span can appear. It is harmless; to avoid it,
+also filter out the host while `activeTab` is null.
+
 ## 5. Configuration
 
 | Option | Default | |
@@ -289,7 +351,7 @@ Behavior specs and the backlog (planned changes with tasks) live in
 [openspec/](openspec/): run `openspec list`.
 
 ```bash
-flutter test                                             # 87 unit + widget tests
+flutter test                                             # 95 unit + widget tests
 OTEL_E2E_ENDPOINT=http://localhost:4318 flutter test test/e2e   # against a real collector
 cd example && flutter run                                # demo app
 cd packages/otel_flutter_native && flutter test          # native crash plugin

@@ -30,7 +30,7 @@ screens, frames, UI stalls, app start, sessions and HTTP calls automatically.
   errors. The plugin keeps `publish_to: none` until its path
   dependency on `otel_flutter` can become a hosted version. No third-party
   code, so no NOTICE file.
-* Verified: 87 unit/widget tests (+4 in `otel_flutter_native`); end-to-end
+* Verified: 95 unit/widget tests (+4 in `otel_flutter_native`); end-to-end
   against the official OpenTelemetry Collector 0.162.0 (33 field checks
   plus an offline-restart test); example app run on the iOS simulator
   (iPhone 16e, iOS 26.1); `flutter build web` compiles. Native crash and
@@ -47,7 +47,7 @@ Flutter is **not on PATH**; use fvm's binary:
 ```bash
 FLUTTER=~/fvm/versions/3.47.7/bin/flutter   # Flutter 3.47.7 / Dart 3.13.5
 $FLUTTER analyze                            # must report "No issues found!"
-$FLUTTER test                               # 87 pass, 2 skipped (e2e)
+$FLUTTER test                               # 95 pass, 2 skipped (e2e)
 (cd packages/otel_flutter_native && $FLUTTER test)  # plugin: 4 pass
 OTEL_E2E_ENDPOINT=http://127.0.0.1:4318 $FLUTTER test test/e2e   # needs a collector
 cd example && $FLUTTER build ios --simulator --debug             # then launch Runner.app
@@ -85,7 +85,7 @@ lib/src/logs/                logger, log_record (Severity)
 lib/src/export/              proto_writer (wire format), otlp_encoder, batch_queue,
                              otlp_http_exporter (retry/circuit breaker), offline_store (interface)
 lib/src/platform/            platform_io.dart (gzip, file queue, OS info) | platform_stub.dart (web)
-lib/src/flutter/             errors, lifecycle, screens (NavigatorObserver), frames (+ StallDetector)
+lib/src/flutter/             errors, lifecycle, screens (NavigatorObserver + Otel.setScreen), frames (+ StallDetector)
 lib/src/http/                OtelHttpClient (package:http wrapper)
 test/                        unit + widget tests; test/support/proto_reader.dart decodes protobuf
 test/e2e/                    real-collector tests (skipped unless OTEL_E2E_ENDPOINT is set)
@@ -188,6 +188,10 @@ pending data goes to disk first, then is sent.
   (by design: bounded memory). Exports only run once the loop yields.
 * `testWidgets` swaps the HTTP client for one that answers 400 → use
   `OtelConfig.httpClient: MockClient(...)`.
+* The test binding keeps its lifecycle state from one test to the next (a
+  test that pauses the app leaves it paused), and `WidgetsBinding` notifies
+  observers even when the state repeats. Tests that change it set the state
+  they need first and end with `resumed`.
 * The collector `file` exporter keeps its offset: truncating its output file
   leaves NUL bytes. Delete the file and restart instead.
 * ANR testing on the emulator: a frozen app only gets an ANR *exit* record
@@ -234,6 +238,7 @@ pending data goes to disk first, then is sent.
 | `add-native-crash-capture` | Native crashes/ANRs as `app.crash`/`app.anr` on next launch. Done except 4.1 (MetricKit on a real iPhone); Crashlytics coexistence verified |
 | `add-web-compression` | gzip on web via the browser's CompressionStream |
 | `production-collector-deployment` | Hardened collector config + deploy guide; keep vendor keys out of the app |
+| `add-manual-screen-reporting` | `Otel.setScreen` for screens without a route push (tabs, page views) + README auto_route pattern. Code, tests and docs done; ready to archive |
 
 Known small gaps (not yet in a change): the offline-retry timer is not paused
 in background; web has no offline queue; app start is measured from
