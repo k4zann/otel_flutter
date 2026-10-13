@@ -88,6 +88,19 @@ domain; an ingest token; showing Grafana to testers; SDK changes.
    memory (`docker stats --no-stream`) and the number of active testers. The
    team lead gets these numbers with the result.
 
+7. **Logs readable in Grafana, fixed in the local backend.** Events carry
+   their meaning in attributes and have no body; Loki shows the body as the
+   line and drops the event name. The collector's `transform/event_name`
+   now also writes a short body for events without one (event name plus the
+   lifecycle state or the jank source and period). Loki's `otlp_config`
+   indexes `event.name`, `service.version` and `os.name` as labels (few
+   values each). Failed HTTP requests stay spans and metrics in the SDK; the
+   `my_team` Dio interceptor also logs them, in its own repository.
+   *Rejected:* a body set by the SDK. Backends that understand OTLP event
+   names show them already, so it is Loki's problem, fixed where Loki is
+   fed. *Rejected:* `session.id` or `app.screen.name` as labels: too many
+   values; they stay fields.
+
 ## Risks / Trade-offs
 
 - [Funnel's bandwidth cap is unpublished] → enough for a few testers. If

@@ -22,8 +22,11 @@ services:
       PROMETHEUS_EXTRA_ARGS: --enable-feature=created-timestamp-zero-ingestion
     volumes:
       - lgtm-data:/data
-      # The image's collector config plus one rule that keeps log event names.
+      # The image's collector config plus a rule that keeps log event names
+      # and gives events a readable log line.
       - ./lgtm/otelcol-config.yaml:/otel-lgtm/otelcol-config.yaml:ro
+      # The image's Loki config plus a few more attributes as labels.
+      - ./lgtm/loki-config.yaml:/otel-lgtm/loki-config.yaml:ro
       # Flutter App Health dashboard, loaded at startup.
       - ./grafana/dashboards:/otel-lgtm/flutter-dashboards:ro
       - ./grafana/provisioning/flutter-dashboards.yaml:/otel-lgtm/grafana/conf/provisioning/dashboards/flutter-dashboards.yaml:ro

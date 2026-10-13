@@ -37,8 +37,11 @@ screens, frames, UI stalls, app start, sessions and HTTP calls automatically.
   ANR reports verified end-to-end on the Android API 36.1 emulator
   (profile build). Local Grafana stack verified end to end with the
   example on the iOS simulator (traces, logs with trace links, metrics,
-  dashboard). **Not yet verified on a real device or in a browser;
-  the core SDK has had no full Android pass yet.**
+  dashboard). On a real iPhone 15 (iOS 26.5.2, release build of `my_team`
+  over Tailscale Funnel): sessions, screens, Dio HTTP spans and delivery of
+  data recorded while offline, while Funnel was off and while the Mac slept.
+  **Not yet verified in a browser; the core SDK has had no full Android
+  pass yet.**
 
 ## Commands
 
@@ -64,6 +67,11 @@ http://localhost:3000 (anonymous admin), dashboard **Flutter > Flutter App
 Health** from `backend/grafana/dashboards/flutter-app-health.json`;
 `docker compose down -v` wipes all data. Query the backends without the UI
 through `localhost:3000/api/datasources/proxy/uid/{prometheus,loki,tempo}/...`.
+
+Testers' phones on any network (`tester-trial-via-funnel`): `tailscale funnel --bg 4318`
+publishes only the OTLP/HTTP port at `https://<mac>.<tailnet>.ts.net`, `tailscale funnel status`
+shows it, `tailscale funnel reset` turns it off. Builds get
+`--dart-define=OTEL_EXPORTER_OTLP_ENDPOINT=https://<mac>.<tailnet>.ts.net` (README, section 3).
 
 Without Docker: download `otelcol` for darwin_arm64 from
 github.com/open-telemetry/opentelemetry-collector-releases (verify the
@@ -96,7 +104,8 @@ packages/otel_flutter_native/  optional plugin: native crashes, ANRs, exit reaso
                              side registers via dartPluginClass + Otel.registerNativeCrashReporter)
 backend/                     docker-compose (Grafana LGTM, optional Jaeger) + plain collector config;
                              grafana/ (Flutter App Health dashboard + provisioning), lgtm/ (the
-                             image's collector config + an event-name rule, mounted over it)
+                             image's collector and Loki configs, mounted over them: event names,
+                             readable event lines, more Loki labels)
 openspec/specs/              behavior specs: tracing, metrics, logs, otlp-export, offline-delivery,
                              error-reporting, app-lifecycle, screen-tracking, ui-performance,
                              http-client, configuration
@@ -215,16 +224,39 @@ pending data goes to disk first, then is sent.
   job, alongside the Flutter setup, made that setup take 172 to 288 s
   instead of 33 to 96 s and tripled the build (runners have 3 CPUs).
 * Loki (3.7.8) drops the OTLP log event name. `backend/lgtm/otelcol-config.yaml`
-  copies it into `event.name`, which Loki keeps as structured metadata
-  `event_name`: filter with `| event_name="session.start"`; it is not a stream
-  label, so `/label/event_name/values` is empty. Refresh that file from the
-  image (`/otel-lgtm/otelcol-config.yaml`) when bumping the image tag.
+  copies it into `event.name`, and `backend/lgtm/loki-config.yaml` makes that
+  the label `event_name` (with `service_version` and `os_name`; by default Loki
+  indexes only service, environment and instance, so Logs Drilldown offers
+  nothing else). Events have no body and Loki shows the body as the line, so
+  the collector writes one (`device.app.lifecycle background`,
+  `app.jank ui_stall 0.85s`). Refresh both files from the image
+  (`/otel-lgtm/otelcol-config.yaml`, `/otel-lgtm/loki-config.yaml`) when
+  bumping the image tag; check them with `otelcol-contrib validate
+  --feature-gates=service.profilesSupport` and `loki -verify-config` inside it.
 * The SDK's cumulative series already hold their first value in the first
   export, so `rate()`/`increase()` miss a single error or app start unless
   Prometheus adds a 0 at the start time (`created-timestamp-zero-ingestion`,
   set in `docker-compose.yml`). Exact counts over a range:
   `sum(max_over_time(x[$__range]) - min_over_time(x[$__range]))` (every
   launch is a new series that never resets).
+* Prometheus in the LGTM image keeps no `otel_scope_name` label, so two
+  instruments with the same name and attributes in different scopes write
+  one series and overwrite each other (tested: scopes counting 5 and 1
+  stored 5). Custom HTTP instrumentation (a Dio interceptor) must record
+  into `Otel.meter('otel_flutter.http').histogram('http.client.request.duration', ...)`,
+  which returns `OtelHttpClient`'s own instrument.
+* Tailscale Funnel's public DNS record took longer than the documented
+  10 minutes: none after 25 minutes, then it appeared about 10 minutes
+  after `tailscale funnel reset` and `tailscale funnel --bg 4318` again.
+  Check `dig +short @1.1.1.1 <mac>.<tailnet>.ts.net` before handing out
+  builds. From the Mac itself the name resolves to its tailnet IP, so
+  test the public path with `curl --resolve <name>:443:<relay IP>`.
+* A sleeping Mac is not fully offline: macOS wakes it for maintenance
+  (`DarkWake` in `pmset -g log`, about 45 s, even on battery), and Funnel and
+  the backend accept data then. In the sleep test, screens recorded a minute
+  after the lid closed arrived during such a wake; the rest waited on the
+  phone until the Mac woke and the app was opened. Read sleep periods from
+  `pmset -g log`, not from when data stopped.
 * Driving the example with simulator taps: Flutter ignores taps during a
   route transition and while the UI thread is blocked (the Jank button
   blocks 800 ms), so pace taps and check `example_button_clicks_total`. Two
@@ -238,6 +270,7 @@ pending data goes to disk first, then is sent.
 | `add-native-crash-capture` | Native crashes/ANRs as `app.crash`/`app.anr` on next launch. Done except 4.1 (MetricKit on a real iPhone); Crashlytics coexistence verified |
 | `add-web-compression` | gzip on web via the browser's CompressionStream |
 | `production-collector-deployment` | Hardened collector config + deploy guide; keep vendor keys out of the app |
+| `tester-trial-via-funnel` | A few testers run `my_team` (mylink repo) on their phones, data to the Mac's Grafana through Tailscale Funnel; measure storage and memory for the real server. Done: my_team integration, Funnel, real-phone checks (3.x), readable logs. Left: testers' builds (needs distribution signing), daily numbers, ending the trial |
 
 Known small gaps (not yet in a change): the offline-retry timer is not paused
 in background; web has no offline queue; app start is measured from
