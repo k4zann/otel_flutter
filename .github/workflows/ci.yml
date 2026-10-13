@@ -20,7 +20,7 @@ permissions:
   contents: read
 
 env:
-  FLUTTER_VERSION: 3.44.2 # keep in sync with .fvmrc
+  FLUTTER_VERSION: 3.47.7 # keep in sync with .fvmrc
 
 jobs:
   changes:

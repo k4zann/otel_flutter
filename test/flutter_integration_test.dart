@@ -198,6 +198,140 @@ void main() {
     );
   });
 
+  Future<NavigatorState> pumpApp(WidgetTester tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        navigatorObservers: [OtelNavigatorObserver()],
+        routes: {
+          '/': (_) => const Text('home'),
+          '/details': (_) => const Text('details'),
+        },
+      ),
+    );
+    return tester.state<NavigatorState>(find.byType(Navigator));
+  }
+
+  // The test binding keeps the lifecycle state between tests, so tests that
+  // change it end with `resumed`.
+  Future<void> lifecycle(WidgetTester tester, AppLifecycleState state) async {
+    tester.binding.handleAppLifecycleStateChanged(state);
+    await tester.pump();
+  }
+
+  Iterable<Msg> screenSpans(String name) =>
+      spans().where((s) => s.string(5) == 'screen $name');
+
+  otelTest('Otel.setScreen takes over from an observed route', (tester) async {
+    await pumpApp(tester);
+    Otel.setScreen('ProfileTab');
+    expect(Otel.currentScreen, 'ProfileTab');
+    Otel.tracer('t').startSpan('on-tab').end();
+    await Otel.flush();
+    expect(screenSpans('/'), hasLength(1), reason: 'the route span ended');
+    expect(spanNamed('on-tab').attributes(9)['app.screen.name'], 'ProfileTab');
+  });
+
+  otelTest('reporting the current screen again changes nothing', (
+    tester,
+  ) async {
+    Otel.setScreen('ProfileTab');
+    Otel.setScreen('ProfileTab');
+    Otel.setScreen('SearchTab');
+    await Otel.flush();
+    expect(screenSpans('ProfileTab'), hasLength(1));
+  });
+
+  otelTest('a route pushed after a reported screen replaces it', (
+    tester,
+  ) async {
+    final nav = await pumpApp(tester);
+    Otel.setScreen('ProfileTab');
+    nav.pushNamed('/details');
+    await tester.pumpAndSettle();
+    expect(Otel.currentScreen, '/details');
+    await Otel.flush();
+    expect(
+      screenSpans('ProfileTab').single.attributes(9)['app.screen.name'],
+      'ProfileTab',
+    );
+  });
+
+  otelTest('a blank screen name is ignored with one warning', (tester) async {
+    final warnings = <String>[];
+    Diagnostics.printer = warnings.add;
+    await pumpApp(tester);
+    Otel.setScreen('  ');
+    Otel.setScreen('');
+    expect(Otel.currentScreen, '/');
+    await Otel.flush();
+    expect(
+      spans().where((s) => s.string(5).startsWith('screen')),
+      isEmpty,
+      reason: 'screen / is still open',
+    );
+    expect(warnings.where((w) => w.contains('setScreen')), hasLength(1));
+  });
+
+  otelTest('a reported screen measures foreground time only', (tester) async {
+    await lifecycle(tester, AppLifecycleState.resumed);
+    var now = Clock.nowMicros();
+    Clock.debugNowMicros = () => now;
+    Otel.setScreen('ProfileTab');
+    now += 1000000;
+    await lifecycle(tester, AppLifecycleState.paused);
+    now += const Duration(minutes: 10).inMicroseconds;
+    await lifecycle(tester, AppLifecycleState.resumed);
+    now += 1000000;
+    await lifecycle(tester, AppLifecycleState.paused);
+    await lifecycle(tester, AppLifecycleState.resumed);
+    await Otel.flush();
+    final visits = screenSpans('ProfileTab').toList();
+    expect(visits, hasLength(2));
+    for (final visit in visits) {
+      expect(visit.fixed64(8) - visit.fixed64(7), 1000000000, reason: '1 s');
+    }
+  });
+
+  otelTest('Otel.setScreen in the background starts its span on return', (
+    tester,
+  ) async {
+    await lifecycle(tester, AppLifecycleState.resumed);
+    var now = Clock.nowMicros();
+    Clock.debugNowMicros = () => now;
+    await lifecycle(tester, AppLifecycleState.paused);
+    Otel.setScreen('ProfileTab'); // e.g. from a notification tap
+    expect(Otel.currentScreen, 'ProfileTab');
+    now += const Duration(minutes: 10).inMicroseconds;
+    final returned = now;
+    await lifecycle(tester, AppLifecycleState.resumed);
+    now += 1000000;
+    await lifecycle(tester, AppLifecycleState.paused);
+    await lifecycle(tester, AppLifecycleState.resumed);
+    await Otel.flush();
+    expect(screenSpans('ProfileTab').single.fixed64(7), returned * 1000);
+  });
+
+  otelTest('a route pushed in the background starts its span on return', (
+    tester,
+  ) async {
+    await lifecycle(tester, AppLifecycleState.resumed);
+    final nav = await pumpApp(tester);
+    var now = Clock.nowMicros();
+    Clock.debugNowMicros = () => now;
+    await lifecycle(tester, AppLifecycleState.paused);
+    nav.pushNamed('/details'); // e.g. a deep link
+    expect(Otel.currentScreen, '/details');
+    now += const Duration(minutes: 10).inMicroseconds;
+    final returned = now;
+    await lifecycle(tester, AppLifecycleState.resumed);
+    await tester.pumpAndSettle();
+    now += 1000000;
+    await lifecycle(tester, AppLifecycleState.paused);
+    await lifecycle(tester, AppLifecycleState.resumed);
+    await Otel.flush();
+    expect(screenSpans('/details').single.fixed64(7), returned * 1000);
+  });
+
   otelTest('background flushes immediately and long absence rotates session', (
     tester,
   ) async {
@@ -373,6 +507,14 @@ void main() {
     Otel.recordError(StateError('x'), null);
     await Otel.flush();
     expect(Otel.activeSpan.isRecording, isFalse);
+  });
+
+  testWidgets('Otel.setScreen before init is a safe no-op', (tester) async {
+    addTearDown(ScreenTracker.instance.reset);
+    requests.clear();
+    Otel.setScreen('x');
+    await Otel.flush();
+    expect(requests, isEmpty);
   });
 
   testWidgets('invalid endpoint fails fast at init', (tester) async {

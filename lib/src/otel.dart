@@ -11,6 +11,7 @@ import 'core/diagnostics.dart';
 import 'flutter/errors.dart';
 import 'flutter/frames.dart';
 import 'flutter/lifecycle.dart';
+import 'flutter/screens.dart';
 import 'logs/logger.dart';
 import 'metrics/meter.dart';
 import 'sdk.dart';
@@ -114,8 +115,32 @@ abstract final class Otel {
   /// Current `session.id`, e.g. to show in a support screen.
   static String? get sessionId => _sdk?.session.id;
 
-  /// Name of the screen currently shown (from [OtelNavigatorObserver]).
+  /// Name of the screen currently shown (from [OtelNavigatorObserver] or
+  /// [setScreen]).
   static String? get currentScreen => OtelSdk.currentScreen;
+
+  /// Reports the screen the user is on, for screens that change without a
+  /// route push: tabs, page views, custom navigation.
+  ///
+  /// Same effects as a page route seen by [OtelNavigatorObserver]: the
+  /// previous `screen` span ends, a `screen <name>` span starts, and later
+  /// telemetry (and a native crash report) carries `app.screen.name`. The
+  /// observer and this call share one current screen, so whichever reports
+  /// last wins. Reporting the current screen again does nothing; a blank
+  /// name is ignored.
+  ///
+  /// Use fixed names such as `ProfileTab`, never ids or user data:
+  /// `app.screen.name` is also a metric attribute.
+  static void setScreen(String name) {
+    if (name.trim().isEmpty) {
+      Diagnostics.warnOnce(
+        'blank-screen',
+        'Otel.setScreen ignored a blank screen name.',
+      );
+      return;
+    }
+    ScreenTracker.instance.show(name);
+  }
 
   /// Adds an attribute to every span and log from now on; null removes it.
   static void setGlobalAttribute(String key, Object? value) {
