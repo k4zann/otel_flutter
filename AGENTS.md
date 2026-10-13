@@ -238,7 +238,6 @@ pending data goes to disk first, then is sent.
 | `add-native-crash-capture` | Native crashes/ANRs as `app.crash`/`app.anr` on next launch. Done except 4.1 (MetricKit on a real iPhone); Crashlytics coexistence verified |
 | `add-web-compression` | gzip on web via the browser's CompressionStream |
 | `production-collector-deployment` | Hardened collector config + deploy guide; keep vendor keys out of the app |
-| `add-manual-screen-reporting` | `Otel.setScreen` for screens without a route push (tabs, page views) + README auto_route pattern. Code, tests and docs done; ready to archive |
 
 Known small gaps (not yet in a change): the offline-retry timer is not paused
 in background; web has no offline queue; app start is measured from
