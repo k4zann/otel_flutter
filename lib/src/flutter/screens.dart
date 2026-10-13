@@ -22,12 +22,22 @@ final class ScreenTracker {
   String? get current => _name;
 
   void show(String name) {
-    if (name == _name && _span != null) return;
+    if (name == _name && (_span != null || _suspended)) return;
     _span?.end();
     _name = name;
     OtelSdk.currentScreen = name;
     if (Pipeline.current case final OtelSdk sdk) sdk.saveCrashContext();
-    _span = _start(name);
+    // Shown while in the background (e.g. a deep link before `resumed`):
+    // current at once, but the span waits for resume() so it measures
+    // foreground time only.
+    _span = _suspended ? null : _start(name);
+  }
+
+  /// Read from the SDK rather than remembered here, so it cannot stay set
+  /// after a shutdown in the background and a later init.
+  static bool get _suspended {
+    final sdk = Pipeline.current;
+    return sdk is OtelSdk && sdk.isInBackground;
   }
 
   /// App went to background.
