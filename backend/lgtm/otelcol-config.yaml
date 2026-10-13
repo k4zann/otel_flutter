@@ -2,7 +2,9 @@
 # one addition, the `transform/event_name` processor in the logs pipeline.
 # Loki drops the OTLP log event name, so otel_flutter's events (session.start,
 # app.jank, app.crash, ...) would arrive nameless; this copies the name into
-# the `event.name` attribute, which Loki keeps as `event_name`.
+# the `event.name` attribute, which Loki keeps as `event_name`. Events also
+# have no body, and Loki shows the body as the log line, so events without
+# one get a short readable line built from the name and key attributes.
 # Refresh this file from the image whenever the image tag changes.
 receivers:
   otlp:
@@ -37,6 +39,11 @@ processors:
           - log.event_name != ""
         statements:
           - set(log.attributes["event.name"], log.event_name)
+          # Most specific first: each one fills the body only while it is empty.
+          - set(log.body, Format("%s %s", [log.event_name, log.attributes["ios.app.state"]])) where log.body == nil and log.attributes["ios.app.state"] != nil
+          - set(log.body, Format("%s %s", [log.event_name, log.attributes["android.app.state"]])) where log.body == nil and log.attributes["android.app.state"] != nil
+          - set(log.body, Format("%s %s %.2fs", [log.event_name, log.attributes["flutter.jank.source"], log.attributes["app.jank.period"]])) where log.body == nil and log.attributes["flutter.jank.source"] != nil and log.attributes["app.jank.period"] != nil
+          - set(log.body, log.event_name) where log.body == nil
 
 exporters:
   otlp_http/metrics:

@@ -34,6 +34,11 @@ or running anything new on a VPS.
   the VPS forwarding to the Mac adds a hop without making delivery more
   reliable (see design.md).
 - AGENTS.md lists this change in the backlog.
+- Added during the trial: logs readable in Grafana. Events (`session.start`,
+  `device.app.lifecycle`, `app.jank`) showed as empty `INFO` lines and Logs
+  Drilldown offered only the service as a label. The local collector now
+  gives events a short line, and Loki also indexes event name, app version
+  and OS. The README says where to look in Grafana.
 
 ## Capabilities
 
@@ -51,8 +56,9 @@ when `offlineStorageDirectory` is set.
   no change to the SDK's battery, network use, privacy or size.
 - `my_team` gains `otel_flutter` as a dependency (`path_provider` is
   already there), in its own repository.
-- The backend (`backend/docker-compose.yml`, `lgtm-data`) is unchanged and
-  stays the only store. The VPS is not involved; its unrelated Telegram bot
+- The backend stays the only store (`lgtm-data`). Its collector and Loki
+  configs (`backend/lgtm/`) change only how logs are shown and indexed, not
+  what apps send. The VPS is not involved; its unrelated Telegram bot
   is untouched.
 - While Funnel is on, anyone who learns the `ts.net` address can send
   telemetry to the Mac's OTLP port. Nothing else on the Mac is exposed, and

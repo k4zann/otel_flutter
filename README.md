@@ -133,10 +133,22 @@ dashboard is
 [backend/grafana/dashboards/flutter-app-health.json](backend/grafana/dashboards/flutter-app-health.json)
 and loads at startup; change the file, not the copy in Grafana.
 
-For everything else use **Explore**: Tempo for traces, Loki for logs (a log
-with a trace id links to its trace), Prometheus for metrics. Event names are
-kept for Loki, so `{service_name="my_app"} | event_name="app.jank"` finds
-events.
+Start there, not in **Drilldown > Metrics**, which lists every raw metric,
+mostly the collector's own. For details use **Explore** (query editor in
+**Code** mode):
+
+* **Loki** for logs and events. Events get a short line, such as
+  `device.app.lifecycle background` or `app.jank ui_stall 0.85s`, and a log
+  with a trace id links to its trace.
+  * One kind of event: `{service_name="my_app", event_name="app.jank"}`
+  * Errors: `{service_name="my_app"} | severity_text=~"ERROR|FATAL"`
+  * One user's session: `{service_name="my_app"} | session_id="<id>"`
+* **Tempo** for HTTP calls and screens.
+  * Failed requests: `{resource.service.name="my_app" && kind=client && status=error}`
+  * Screens visited: `{resource.service.name="my_app" && name=~"screen .*"}`
+
+In **Drilldown > Logs** you can filter by service, environment, version, OS
+and event name; every other attribute is under the **Fields** tab.
 
 `docker compose down` stops the backend; `docker compose down -v` also
 deletes the stored data; `colima stop` stops the VM.
@@ -154,6 +166,7 @@ Which address the app should use:
 | iOS simulator, macOS, web | `http://localhost:4318` |
 | Android emulator | `http://10.0.2.2:4318` |
 | Real phone (same Wi-Fi) | `http://<your-computer-LAN-IP>:4318` |
+| Testers' phones, any network | `https://<mac>.<tailnet>.ts.net` ([Tailscale Funnel](#testing-with-other-people-tailscale-funnel)) |
 
 Plain `http://` needs a debug exception: Android
 `android:usesCleartextTraffic="true"` in `src/debug/AndroidManifest.xml`,
@@ -161,6 +174,48 @@ iOS `NSAllowsLocalNetworking` in `Info.plist`. The example app has both.
 Android release builds also need
 `<uses-permission android:name="android.permission.INTERNET"/>` in the main
 manifest.
+
+### Testing with other people (Tailscale Funnel)
+
+To let a few testers send telemetry from their own phones, on any network,
+to the backend on your Mac, publish the Mac's OTLP port with
+[Tailscale Funnel](https://tailscale.com/kb/1223/funnel). It gives a free
+`https://<mac>.<tailnet>.ts.net` address with a valid certificate, with no
+domain, port forward or extra server.
+
+One-time setup: install Tailscale on the Mac, sign in, and make sure the
+`tailscale` command works in Terminal. The first run of the command below
+prints an admin link that turns on MagicDNS, HTTPS certificates and Funnel
+for your tailnet. Funnel is included in the free Personal plan. The public
+DNS record can take a while to appear; phones can reach the address once
+`dig +short @1.1.1.1 <mac>.<tailnet>.ts.net` prints an IP. If it stays empty
+for over half an hour, run `tailscale funnel reset` and turn Funnel on again.
+
+```bash
+tailscale funnel --bg 4318   # on: https://<mac>.<tailnet>.ts.net -> 127.0.0.1:4318
+tailscale funnel status      # what is published
+tailscale funnel reset       # off
+```
+
+`--bg` keeps Funnel on across restarts, so turn it off when a test session
+ends. Build the testers' app with the address and no path:
+
+```bash
+flutter build ipa --dart-define=OTEL_EXPORTER_OTLP_ENDPOINT=https://<mac>.<tailnet>.ts.net
+```
+
+* An `endpoint` set in code wins over the define. Leave it unset, or read the
+  define yourself as [example/lib/main.dart](example/lib/main.dart) does.
+* Set `offlineStorageDirectory`. While the Mac sleeps or Funnel is off,
+  exports fail and the phones keep them on disk (5 MB and 2 days each). They
+  are sent, with their original timestamps, once the Mac is reachable and the
+  app is open (iOS suspends apps in the background). Without it, they are
+  dropped after 4 attempts.
+* Only the OTLP/HTTP receiver is published: not Grafana, not gRPC. Anyone who
+  learns the address can send telemetry to it while Funnel is on (the name
+  appears in public certificate logs); `docker compose down -v` clears junk.
+* For a few testers, not a whole QA team: Funnel's bandwidth limit is not
+  published. A team needs its own collector (see Production).
 
 ### Production
 
