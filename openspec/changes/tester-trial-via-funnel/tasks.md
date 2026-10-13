@@ -6,21 +6,22 @@
 - [ ] 1.4 From outside the home network (the VPS, or a laptop on a phone hotspot): verify the same POST to `https://<mac>.<tailnet>.ts.net/v1/traces` prints `200` without `-k`, and `https://<mac>.<tailnet>.ts.net/api/health` gets the collector's 404, not Grafana's JSON (only 4318 is published)
 - [ ] 1.5 Run `tailscale funnel reset`; verify the POST from outside now fails to connect, then turn Funnel back on and verify it prints `200` again
 
-## 2. Real phone, end to end (example app)
+## 2. Integrate otel_flutter into your app
 
-- [ ] 2.1 Build the example in release or profile mode for a real phone with `--dart-define=OTEL_EXPORTER_OTLP_ENDPOINT=https://<mac>.<tailnet>.ts.net`, with the phone's Wi-Fi off, and tap **Traced work**; verify within a minute: the `load_profile` trace in Tempo, the "Profile loaded" log in Loki, and `example_button_clicks_total` in Prometheus, all for `otel-flutter-example`
-- [ ] 2.2 Run `tailscale funnel reset`, tap **Traced work** a few times, wait for the SDK's backoff, turn Funnel back on and bring the app to the foreground; verify the taps made while Funnel was off reach Grafana (the counter includes them, and the spans keep their original timestamps)
-- [ ] 2.3 Repeat 2.2 by putting the Mac to sleep for 10 minutes instead; verify that after waking, Funnel works again without any command and the phone's backlog arrives
+- [ ] 2.1 In your Flutter app's `pubspec.yaml`, add `otel_flutter` as a git dependency on `https://github.com/k4zann/otel_flutter` pinned to a commit (or `path:` to this checkout), plus `path_provider`; verify `flutter pub get` succeeds and the app still builds
+- [ ] 2.2 In the app's `main()`, call `Otel.init` with the app's `serviceName` and `offlineStorageDirectory: (await getApplicationSupportDirectory()).path`. Read `OTEL_EXPORTER_OTLP_ENDPOINT` first and fall back to the local backend, like `example/lib/main.dart`, because an `endpoint` in code wins over the define. Add `OtelNavigatorObserver()` to the app's navigator observers. Verify on a simulator or emulator against the local backend: the app's `service_name` shows up in Grafana with `screen <name>` spans in Tempo and a `session.start` event in Loki (`{service_name="<app>"} | event_name="session.start"`)
 
-## 3. Docs
+## 3. Your app on a real phone, through Funnel
 
-- [ ] 3.1 README, section "3. What it needs to connect": add "Testing with other people (Tailscale Funnel)" covering one-time setup, on/off commands, the `--dart-define`, the `offlineStorageDirectory` requirement, that an `endpoint` in code wins, what is exposed, what happens while the Mac sleeps, and that it is not meant for a whole QA team. Add a "Testers' phones, any network" row to the endpoint table. Verify every command in the section is one that worked in groups 1 and 2
-- [ ] 3.2 AGENTS.md: add `tester-trial-via-funnel` to the backlog table and a Commands note for Funnel; add a Gotchas entry for anything surprising found in groups 1 and 2; verify `openspec list` shows the change and the table matches it
+- [ ] 3.1 Build your app in release or profile mode for a real phone with `--dart-define=OTEL_EXPORTER_OTLP_ENDPOINT=https://<mac>.<tailnet>.ts.net`, turn the phone's Wi-Fi off, open the app and visit a few screens; verify within a minute: a new `session.start` in Loki and `screen <name>` spans in Tempo for the screens you visited
+- [ ] 3.2 Run `tailscale funnel reset`, visit a few more screens, wait for the SDK's backoff, turn Funnel back on and bring the app to the foreground; verify the screen spans from while Funnel was off arrive, with their original timestamps
+- [ ] 3.3 Repeat 3.2 by putting the Mac to sleep for 10 minutes instead; verify that after waking, Funnel works again without any command and the phone's backlog arrives
 
-## 4. Testers
+## 4. Docs and testers
 
-- [ ] 4.1 In the app under test, check that `Otel.init` sets `offlineStorageDirectory` and does not hardcode another `endpoint` (leave it unset, or read the define like `example/lib/main.dart`); verify a build with the Funnel define shows up in Grafana under that app's `service_name`
-- [ ] 4.2 Hand out tester builds made with the define (TestFlight, Firebase App Distribution or an APK); verify each tester's device appears in Loki with `{service_name="<app>"} | event_name="session.start"`, one `app_installation_id` per tester
+- [ ] 4.1 README, section "3. What it needs to connect": add "Testing with other people (Tailscale Funnel)" covering one-time setup, on/off commands, the `--dart-define`, the `offlineStorageDirectory` requirement, that an `endpoint` in code wins, what is exposed, what happens while the Mac sleeps, and that it is not meant for a whole QA team. Add a "Testers' phones, any network" row to the endpoint table. Verify every command in the section is one that worked in groups 1 to 3
+- [ ] 4.2 AGENTS.md: add `tester-trial-via-funnel` to the backlog table and a Commands note for Funnel; add a Gotchas entry for anything surprising found in groups 1 to 3; verify `openspec list` shows the change and the table matches it
+- [ ] 4.3 Hand out builds of your app made with the define (TestFlight, Firebase App Distribution or an APK); verify each tester's device appears in Loki with `{service_name="<app>"} | event_name="session.start"`, one `app_installation_id` per tester
 
 ## 5. Trial results and wrap-up
 
