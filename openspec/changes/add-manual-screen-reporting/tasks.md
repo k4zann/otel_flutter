@@ -10,10 +10,10 @@
 
 ## 3. Docs
 
-- [ ] 3.1 README, section "4. Manual instrumentation": add "Tabs and other screens without a route" next to the go_router section. Show `Otel.setScreen`, then the auto_route tabs pattern: an `AutoRouterObserver` calling `Otel.setScreen(route.name)` on `didInitTabRoute`/`didChangeTabRoute`, and `OtelNavigatorObserver` with `screenName` mapping the tab host to the last tab and `routeFilter` skipping wrapper routes. Mention the brief host span at startup and the fixed-names rule; verify the snippet against auto_route 11's `AutoRouterObserver` signatures
-- [ ] 3.2 AGENTS.md: add `add-manual-screen-reporting` to the backlog table and update the test count under "Verified" and in Commands; verify `openspec list` shows the change and the counts match the `flutter test` output
+- [x] 3.1 README, section "4. Manual instrumentation": add "Tabs and other screens without a route" next to the go_router section. Show `Otel.setScreen`, then the auto_route tabs pattern: an `AutoRouterObserver` calling `Otel.setScreen(route.name)` on `didInitTabRoute`/`didChangeTabRoute`, and `OtelNavigatorObserver` with `screenName` mapping the tab host to the last tab and `routeFilter` skipping wrapper routes. Mention the brief host span at startup and the fixed-names rule; verify the snippet against auto_route 11's `AutoRouterObserver` signatures
+- [x] 3.2 AGENTS.md: add `add-manual-screen-reporting` to the backlog table and update the test count under "Verified" and in Commands; verify `openspec list` shows the change and the counts match the `flutter test` output
 
 ## 4. Verification
 
-- [ ] 4.1 Run `~/fvm/versions/3.47.7/bin/dart format --output=none --set-exit-if-changed .`, `~/fvm/versions/3.47.7/bin/flutter analyze` and `~/fvm/versions/3.47.7/bin/flutter test`; verify no format changes, "No issues found!" and all tests pass. No export or encoding code changes, so no e2e run is needed
-- [ ] 4.2 Run `openspec validate --all --strict`; verify it passes
+- [x] 4.1 Run `~/fvm/versions/3.47.7/bin/dart format --output=none --set-exit-if-changed .`, `~/fvm/versions/3.47.7/bin/flutter analyze` and `~/fvm/versions/3.47.7/bin/flutter test`; verify no format changes, "No issues found!" and all tests pass. No export or encoding code changes, so no e2e run is needed
+- [x] 4.2 Run `openspec validate --all --strict`; verify it passes
