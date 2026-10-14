@@ -25,6 +25,7 @@ rules:
   design:
     - List alternatives considered and why they were rejected.
   tasks:
+    - Group tasks as vertical slices - each group delivers one observable behavior end to end (code, test and any config it needs) and can be verified on its own. Never group by layer, platform or phase (all code, then all tests); only the final docs/verification group is exempt. Put the simplest end-to-end scenario first, and mark groups that need an owner decision as a human checkpoint.
     - Every task states how to verify it (test name, command, or observable result).
     - End with a verification group running `~/fvm/versions/3.47.7/bin/flutter analyze` and `flutter test`, plus test/e2e against a real collector when export or encoding code changed.
     - Include a task to update AGENTS.md (layout, commands, backlog) and the README when they are affected.
